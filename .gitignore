@@ -9,3 +9,12 @@ build/
 # Go
 /hnbridge
 *.test
+
+# Flutter / Dart（apps/android）
+apps/android/.dart_tool/
+apps/android/build/
+apps/android/.flutter-plugins
+apps/android/.flutter-plugins-dependencies
+apps/android/android/local.properties
+apps/android/android/.gradle/
+apps/android/ios/Flutter/ephemeral/
