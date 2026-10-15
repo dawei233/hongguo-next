@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_no_moov",
+  "note": "无 moov：A 返回 False（不产出输出文件）",
+  "python_ok": false,
+  "in_bytes": 80,
+  "out_bytes": null
+}

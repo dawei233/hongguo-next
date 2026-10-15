@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_stco_64bit",
+  "note": "stco 用 64 位尺寸头（has_64 重打包路径）",
+  "python_ok": true,
+  "in_bytes": 593,
+  "out_bytes": 609
+}

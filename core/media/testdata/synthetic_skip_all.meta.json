@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_skip_all",
+  "note": "剥 9 种 box + stco/co64 负 delta + 偏移 clamp 到 0",
+  "python_ok": true,
+  "in_bytes": 1328,
+  "out_bytes": 1006
+}

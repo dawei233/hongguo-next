@@ -1,0 +1,50 @@
+{
+  "source": "nas-backend/danmaku.py",
+  "vectors": [
+    {
+      "aid": "8662",
+      "device_id": "1000000000000000001",
+      "install_id": "1000000000000000002",
+      "nonce_hex": "000102030405060708090a",
+      "raw_query": "_rticket=1760000000000&ac=wifi&aid=8662&app_name=novelread&channel=update_64&device_brand=Redmi&device_id=1000000000000000001&device_platform=android&device_type=25053RT47C&dpi=520&iid=1000000000000000002&language=zh&manifest_version_code=73532&os=android&os_api=36&os_version=16&resolution=1280%2A2772&ssmix=a&update_version_code=73532&version_code=73532&version_name=7.3.5.32",
+      "stamp": 1760000000,
+      "stamp_ms": 1760000000000,
+      "x_argus": "PMxPj+JImxTKEfQuAsVmWpqWTSj7R16GjxCNw6yFwXz58GKP+HSxYu5VuI1vP9kqov5qlIXLiIdt0Xi6gzYWYn42PIWMmB1Eq+g5I5HBY1u/qVspZOiCnF3lb3NwSaf/5AVMwBUiPar9edA1dlgxB1+B7rlORSoCB0f92VPI2IehS/Pk1p5xtQ+NF8D5jYCLhlUKpHn0piEVcsuYT+1XAR0l",
+      "x_gorgon": "840420e10000ee52c7fcfe74163888622f1454edf8e8dae53a05",
+      "x_khronos": "1760000000",
+      "x_ladon": "AgMEBS29hQm9XaB7/y1OxfhGK1qUXoV+4yYWolKDMC0DpDXW",
+      "x_ss_req_ticket": "1760000000000",
+      "x_ss_stub": ""
+    },
+    {
+      "aid": "8662",
+      "device_id": "1000000000000000001",
+      "install_id": "1000000000000000002",
+      "nonce_hex": "ffffffffffffffffffffff",
+      "raw_query": "_rticket=1760000001000&ac=wifi&aid=8662&app_name=novelread&channel=update_64&device_brand=Redmi&device_id=1000000000000000001&device_platform=android&device_type=25053RT47C&dpi=520&iid=1000000000000000002&language=zh&manifest_version_code=73532&os=android&os_api=36&os_version=16&resolution=1280%2A2772&ssmix=a&update_version_code=73532&version_code=73532&version_name=7.3.5.32",
+      "stamp": 1760000001,
+      "stamp_ms": 1760000001000,
+      "x_argus": "PMxhgUKIXtho/6stSub0VASKJDoVY13IeJ5USEZ0fLHWQSNV6jZGdLK8DH8WjJFlgvQacqtv8U+BeivejDi50SA0Uu9ykghibgDv4dcAX63bc650wB5axKQzru8DuMpoP+vgjpGuQSfvk99/zSyJWtJPIvBq2d1rQ4bZNLmpiGgOkSIMCZJgAGS8I/KGEdD/CDE1r0HjhZLiAgORHb6easrYz469gXepb3mwKYnlu5Xwkw==",
+      "x_gorgon": "840480ef000032234e1a1d9a0de59c853b6eb322783462ae234a",
+      "x_khronos": "1760000001",
+      "x_ladon": "/////7G1jZs98FBscf/otWzYeEcnbYtXWmaqLP6kwG9zrBOb",
+      "x_ss_req_ticket": "1760000001000",
+      "x_ss_stub": ""
+    },
+    {
+      "aid": "8662",
+      "device_id": "1000000000000000001",
+      "install_id": "1000000000000000002",
+      "nonce_hex": "deadbeefcafebabe001122",
+      "raw_query": "_rticket=1234567890123&ac=wifi&aid=8662&app_name=novelread&channel=update_64&device_brand=Redmi&device_id=1000000000000000001&device_platform=android&device_type=25053RT47C&dpi=520&iid=1000000000000000002&language=zh&manifest_version_code=73532&os=android&os_api=36&os_version=16&resolution=1280%2A2772&ssmix=a&update_version_code=73532&version_code=73532&version_name=7.3.5.32",
+      "stamp": 1234567890,
+      "stamp_ms": 1234567890123,
+      "x_argus": "PMxhgUKIXtho/6stSub0VASKJDoVY13IeJ5USEZ0fLHWQWONMmiFfar3LbXzkvVTXoNAJEkEbNwQDtREHnW9lbGMIAv2bnNbcTHnNUHIAsvTWaR5BJbmcKcRWcAg55xvS13Son3BpTIC65Me/gxaAhZ9LEkXV6kSdh3tgmsDFg98RZ8jSITQFqO1h2wCQi0k8mZ0OCLY1ws0cOy0/CVQXJG6Ku6ZNq4wWfZwEpqJ9+KMRQ==",
+      "x_gorgon": "8404c0ed00006cb6a15163c4f9cae2c95e37a99fa63b92d530f6",
+      "x_khronos": "1234567890",
+      "x_ladon": "vu/K/pCLBNYcyp3ids3I6SkopCRHtQHeOEcUJvZBJJvXOMF3",
+      "x_ss_req_ticket": "1234567890000",
+      "x_ss_stub": ""
+    }
+  ]
+}

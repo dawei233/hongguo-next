@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_top_uuid_64",
+  "note": "顶层 64 位 uuid 盒原样透传 + co64 重写",
+  "python_ok": true,
+  "in_bytes": 625,
+  "out_bytes": 633
+}

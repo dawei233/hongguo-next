@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_nested_size0",
+  "note": "stbl 内 size=0 box：按 len(buf)-offset 解释",
+  "python_ok": true,
+  "in_bytes": 609,
+  "out_bytes": 581
+}

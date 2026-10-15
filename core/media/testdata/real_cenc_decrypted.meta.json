@@ -1,0 +1,7 @@
+{
+  "name": "real_cenc_decrypted",
+  "note": "CENC 加密样本经 -decryption_key 解密 + faststart 后净化（ADR-0004 实测复核）",
+  "python_ok": true,
+  "in_bytes": 93263,
+  "out_bytes": 91284
+}

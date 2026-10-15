@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_stco_truncated",
+  "note": "stco count 超出 payload → 提前 break → 触发 delta 重算",
+  "python_ok": true,
+  "in_bytes": 637,
+  "out_bytes": 589
+}

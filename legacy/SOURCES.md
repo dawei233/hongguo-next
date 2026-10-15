@@ -58,6 +58,7 @@ B:
     - "go test -race: 99 个测试函数 / 98 通过 / 1 跳过（仅 live 网络探活，opt-in）/ 0 失败"
     - "bridge cgo 构建导出 2 个符号：DuanjuRequest / DuanjuFree"
     - "环境注记：需 ffmpeg 在 PATH 才能跑加密 HLS 解码两测；johnvansickle 静态 7.0.2 的 HLS demuxer 在本容器段错误，改用 BtbN gpl 构建后通过"
+    - "vendor 保真：hls_playlist_detect_test.go 与 hongguo_finalize_test.go 上游即未 gofmt，本仓逐字节保真保留，未擅自格式化"
   last_triaged: 2026-10-15
   backports: []                    # [{sha: <upstream-sha>, why: 站源失效修复, at: <date>}]
 
@@ -70,10 +71,16 @@ C:
   upstream_status: active          # 最后核实 2026-10-15：233★ / 19 open issue / 未归档
   license: GPL-3.0                 # 与本仓同许可
   taken:
-    - src/native/xifan.js, hema.js            → core/source/providers/{xifan,hema}
-    - src/native/danmaku.js, danmaku-sign.js  → core/danmaku/**
-    - scripts/fixtures/danmaku-sign-vectors.json → core/danmaku/testdata/vectors.json
+    - src/native/xifan.js (135), hema.js (167) → core/source/providers/{xifan,hema}   # M3 已移植；hema 另搬 3 个 __NEXT_DATA__ 页面快照
+    - src/native/danmaku.js (488), danmaku-sign.js (385), sm3.js (36) → core/danmaku/  # M2 已移植
+    - "scripts/fixtures/danmaku-sign-vectors.json → core/danmaku/testdata/vectors.json"
+    - components/danmakuModel.mjs, danmakuOfficial.mjs, danmakuSource.mjs → core/danmaku/layout.go
     - src/native/licenses/*                   → third_party/drpys/
+  verified:                        # 2026-10-15 M2 实测
+    - "向量逐字节搬用：本仓 vectors.json 与 C 的 fixtures sha256 全等（c7308e2da6c7484e…），由主会话独立复核"
+    - "三组向量的请求头与 query 全部逐字节一致；SM3 11 种长度、64 组随机输入与扁平包既有实现交叉一致"
+  divergence:                      # 已知待收敛，非缺陷隐瞒
+    - "X-SS-Req-Ticket：黄金向量要求「秒×1000」（毫秒位恒 000，第 3 组 1234567890123 专为抓此差异而设）；扁平 core/provider_hongguo_comment_sign.go:58 与 provider_hongguo_sign.go:46 用 now.UnixMilli()（毫秒位非零），属偏离。新包从向量（正确），扁平包待拆包时收敛。"
   last_triaged: 2026-10-15
   backports: []
 
@@ -86,8 +93,16 @@ A:
   upstream_status: no-upstream     # 非 fork；已停止开发（最后推送 2026-10-11）
   license: NONE                    # 自有仓，版权人以 GPL-3.0 授权
   taken:
-    - nas-backend/mp4_sanitize.py        → core/media/{sanitize,boxes}.go
-    - nas-backend/hongguo_core.py#1664-1905 → core/media/{ffmpeg,pipeline}.go
+    - nas-backend/mp4_sanitize.py (300)  → core/media/{sanitize,boxes}.go   # M3 已移植，11 组 golden fixture 字节级对齐
+    - nas-backend/sources/media.py, server.py 的 ffmpeg 解密调用 → core/media/{ffmpeg,pipeline,hls,probe}.go
+    - "nas-backend/danmaku.py (894) 的算法结论 → 经 C 的黄金向量间接承接（见 C 段 divergence）"
+  not_adopted:                     # 实测后有意不沿用，非遗漏
+    - "server.py:1104 解密失败时净化加密原文件兜底 —— 实测该产物解码吐垃圾，本仓改为解密失败即失败"
+    - "liushen/（88767 行代码生成产物）—— 签名改用 B 的 Go 实现 + C 的向量校验，不移植"
+  verified:                        # 2026-10-15 M3 实测（主会话独立复核）
+    - "11 组 golden fixture；其中 10 组与重新生成的 Python 输出逐字节一致"
+    - "real_cenc_decrypted 组输入因 ffmpeg 解密产物不确定而每次不同（输入 sha256 变、输出尺寸恒 93263→91284）；已用「新生成输入喂 Go、与同输入 Python 输出比」的决定性验证确认逐字节一致"
+    - "新发现：ffmpeg 不校验 -decryption_key（错密钥同样退出 0、产物尺寸与 ffprobe 全绿，只有真解码吐垃圾）→ Probe 阶段已加解码验收"
   last_triaged: n/a
   backports: []
 ```

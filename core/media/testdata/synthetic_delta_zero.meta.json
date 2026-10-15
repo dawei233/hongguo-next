@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_delta_zero",
+  "note": "delta 恰为 0 时的 stco 头重复计数行为（字节级复现）",
+  "python_ok": true,
+  "in_bytes": 593,
+  "out_bytes": 593
+}

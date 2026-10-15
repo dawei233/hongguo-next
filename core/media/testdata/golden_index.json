@@ -1,0 +1,82 @@
+{
+  "source": "/workspace/红果/hongguo-monorepo/nas-backend/mp4_sanitize.py",
+  "cases": [
+    {
+      "name": "synthetic_skip_all",
+      "note": "剥 9 种 box + stco/co64 负 delta + 偏移 clamp 到 0",
+      "python_ok": true,
+      "in_bytes": 1328,
+      "out_bytes": 1006
+    },
+    {
+      "name": "synthetic_two_mdat",
+      "note": "两个 mdat + moov 前顶层 free + 非 moov/mdat 顶层原样保留",
+      "python_ok": true,
+      "in_bytes": 733,
+      "out_bytes": 701
+    },
+    {
+      "name": "synthetic_stco_64bit",
+      "note": "stco 用 64 位尺寸头（has_64 重打包路径）",
+      "python_ok": true,
+      "in_bytes": 593,
+      "out_bytes": 609
+    },
+    {
+      "name": "synthetic_stco_truncated",
+      "note": "stco count 超出 payload → 提前 break → 触发 delta 重算",
+      "python_ok": true,
+      "in_bytes": 637,
+      "out_bytes": 589
+    },
+    {
+      "name": "synthetic_delta_zero",
+      "note": "delta 恰为 0 时的 stco 头重复计数行为（字节级复现）",
+      "python_ok": true,
+      "in_bytes": 593,
+      "out_bytes": 593
+    },
+    {
+      "name": "synthetic_nested_size0",
+      "note": "stbl 内 size=0 box：按 len(buf)-offset 解释",
+      "python_ok": true,
+      "in_bytes": 609,
+      "out_bytes": 581
+    },
+    {
+      "name": "synthetic_no_ftyp",
+      "note": "无 ftyp：输出直接从其他顶层 box 开始",
+      "python_ok": true,
+      "in_bytes": 585,
+      "out_bytes": 557
+    },
+    {
+      "name": "synthetic_top_uuid_64",
+      "note": "顶层 64 位 uuid 盒原样透传 + co64 重写",
+      "python_ok": true,
+      "in_bytes": 625,
+      "out_bytes": 633
+    },
+    {
+      "name": "synthetic_no_moov",
+      "note": "无 moov：A 返回 False（不产出输出文件）",
+      "python_ok": false,
+      "in_bytes": 80,
+      "out_bytes": null
+    },
+    {
+      "name": "real_cenc_decrypted",
+      "note": "CENC 加密样本经 -decryption_key 解密 + faststart 后净化（ADR-0004 实测复核）",
+      "python_ok": true,
+      "in_bytes": 93263,
+      "out_bytes": 91284
+    },
+    {
+      "name": "real_faststart_remux",
+      "note": "解密产物（faststart remux 让 sgpd/sbgp 回来）净化",
+      "python_ok": true,
+      "in_bytes": 91178,
+      "out_bytes": 91124
+    }
+  ]
+}

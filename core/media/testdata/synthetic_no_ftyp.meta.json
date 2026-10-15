@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_no_ftyp",
+  "note": "无 ftyp：输出直接从其他顶层 box 开始",
+  "python_ok": true,
+  "in_bytes": 585,
+  "out_bytes": 557
+}

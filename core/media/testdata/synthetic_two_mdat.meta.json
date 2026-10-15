@@ -1,0 +1,7 @@
+{
+  "name": "synthetic_two_mdat",
+  "note": "两个 mdat + moov 前顶层 free + 非 moov/mdat 顶层原样保留",
+  "python_ok": true,
+  "in_bytes": 733,
+  "out_bytes": 701
+}

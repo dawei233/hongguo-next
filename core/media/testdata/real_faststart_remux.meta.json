@@ -1,0 +1,7 @@
+{
+  "name": "real_faststart_remux",
+  "note": "解密产物（faststart remux 让 sgpd/sbgp 回来）净化",
+  "python_ok": true,
+  "in_bytes": 91178,
+  "out_bytes": 91124
+}
