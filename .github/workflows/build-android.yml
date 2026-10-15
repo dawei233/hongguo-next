@@ -118,14 +118,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 工具链：Java（Gradle 9 / AGP 9.1 需要）+ Android SDK（sdkmanager + 许可预受理）
-      # + NDK r28c（钉死，与 vendored build.gradle.kts 的 ndkVersion 一致）
+      # 工具链：Java（Gradle 9 / AGP 9.1 需要）+ NDK r28c（钉死，与 vendored
+      # build.gradle.kts 的 ndkVersion 一致）。
+      # 不用 android-actions/setup-android@v3：CI 首跑实测它在 sdkmanager 安装
+      # 旧版 "tools" 包时报 "Failed to find package 'tools'"（该包已被 Google
+      # 移除，action 还没跟进）。ubuntu runner 本就预装 Android SDK + cmdline-tools，
+      # 需要的平台/构建工具在 ③ 前用 sdkmanager 显式装。
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-
-      - uses: android-actions/setup-android@v3
 
       - id: ndk
         uses: nttld/setup-ndk@v1
@@ -164,6 +166,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
+
+      # Android 平台/构建工具：runner 预装的 SDK 未必带 AGP 需要的版本，
+      # 用 sdkmanager 显式装（接受许可）。不用 android-actions/setup-android（见上）。
+      - name: 安装 AGP 需要的平台与构建工具
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-35" "build-tools;35.0.0" "platform-tools" > /dev/null
 
       - name: 引导 gradle wrapper（vendor 状态无 gradlew；生成物已被 .gitignore 排除）
         run: |
