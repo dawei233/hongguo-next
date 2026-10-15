@@ -100,11 +100,13 @@ jobs:
 
       # 纯 Go 内核（core/ 非 cgo）对 Android 的交叉编译冒烟：CGO_ENABLED=0 无需 NDK，
       # 任何 runner 都能跑。bridge/go 的 cgo 交叉编译需要 NDK，见 android-build ①。
+      # 只测 arm64：真实手机全是 arm64；GOOS=android 的 amd64 需要 cgo 外部链接
+      # （CI 首跑实测报 "requires external (cgo) linking, but cgo is not enabled"），
+      # 而 arm64 不需要 —— 这不是退化，是 Go 对这两个 GOARCH 的链接要求本就不同。
       - name: android 纯 Go 交叉编译冒烟（CGO_ENABLED=0）
         if: runner.os == 'Linux'
         run: |
           GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build ./...
-          GOOS=android GOARCH=amd64 CGO_ENABLED=0 go build ./...
 
   # ─────────────────────────────────────────────────────────────────────────
   # android-build：① NDK 交叉编译 .so → ② Dart 门禁 → ③ Release APK → ④ 上传。

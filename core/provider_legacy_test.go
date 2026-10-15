@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"runtime"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -100,7 +101,10 @@ func TestLegacyAnonymousCatalogAndSessionReuse(t *testing.T) {
 		t.Fatal("automatic session changed user configuration")
 	}
 	info, err := os.Stat(filepath.Join(d.cfg.dataDir, "huangguo-session.json"))
-	if err != nil || info.Mode().Perm() != 0600 {
+	// POSIX 权限位在 Windows 上不存在：os.Stat 的 Mode() 不反映 0600。
+	// 这是 vendored 测试（上游只在 Android/Linux 跑过）的平台可移植性缺口，
+	// 由 hongguo-next 的三平台 CI 首次暴露；Windows 上跳过该断言，语义不变。
+	if runtime.GOOS != "windows" && (err != nil || info.Mode().Perm() != 0600) {
 		t.Fatal("anonymous session must be private", err)
 	}
 	restarted := &Downloader{cfg: d.cfg, providerHosts: map[string]string{}}
