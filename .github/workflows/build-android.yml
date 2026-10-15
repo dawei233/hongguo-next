@@ -231,7 +231,10 @@ jobs:
           flutter test > test.log 2>&1 || true
           # 防假绿：test 崩溃/中断（超时、tool exit 255 等）时日志里没有结论行，
           # 失败计数会得 0 —— 必须先断言"产出了结论"，否则按失败处理。
-          if ! grep -qE 'All tests passed!|Some tests failed' test.log; then
+          # 注意两种结论格式：本地（有 TTY）是 "Some tests failed."；
+          # CI（无 TTY，compact reporter）是 "155 tests passed, 7 failed, 2 skipped."
+          # —— CI 第四跑实测只匹配前者导致误判"未产出结论"而假红。
+          if ! grep -qE 'All tests passed!|Some tests failed|[0-9]+ tests passed' test.log; then
             echo "---- flutter test 未产出结论（崩溃/中断），按失败处理 ----"
             tail -40 test.log
             exit 1
@@ -240,7 +243,13 @@ jobs:
           grep -E '\[E\]' test.log || echo "（无失败用例）"
           echo "---- 尾部 15 行 ----"
           tail -15 test.log
+          # 失败数两种格式各取一次：
+          #   TTY:      "01:04 +155 ~2 -7: Some tests failed."   → " -7:"
+          #   compact:  "155 tests passed, 7 failed, 2 skipped." → "7 failed"
           FAILS=$(grep -oE ' -[0-9]+:' test.log | tail -1 | grep -oE '[0-9]+' || true)
+          if [ -z "${FAILS}" ]; then
+            FAILS=$(grep -oE '[0-9]+ failed' test.log | tail -1 | grep -oE '[0-9]+' || true)
+          fi
           echo "flutter test 失败数=${FAILS:-0}（vendored 上游冻结基线 7，见 ARCHITECTURE.md §7 M4）"
           if [ "${FAILS:-0}" -gt 7 ]; then
             echo "::error::flutter test 失败数 ${FAILS} 超过冻结基线 7 —— 出现基线外回归"
