@@ -176,7 +176,8 @@ jobs:
 
       - name: 引导 gradle wrapper（vendor 状态无 gradlew；生成物已被 .gitignore 排除）
         run: |
-          printf 'flutter.sdk=%s\n' "$FLUTTER_ROOT" > android/local.properties
+          printf 'flutter.sdk=%s\n' "$FLUTTER_ROOT" > local.properties
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" >> local.properties
           gradle wrapper --gradle-version "$HN_GRADLE_VERSION" --distribution-type all
         working-directory: apps/android/android
 
