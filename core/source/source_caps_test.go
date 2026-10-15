@@ -118,15 +118,30 @@ func TestCapBitOrderAndNamesMatchContract(t *testing.T) {
 	}
 }
 
-// TestSourceIDEnumMatchesContract 锁定 §4.3 的 13 个站源 ID。
+// TestSourceIDEnumMatchesContract 锁定 §4.3 的 11 个对外站源 ID：Go 常量顺序 == 契约枚举顺序。
+//
+// 反向也断言：facet 名（cloudfront）与回退机制名（legacy）都不是站源，不得出现在枚举里。
 func TestSourceIDEnumMatchesContract(t *testing.T) {
 	defs := defs(t, loadSchema(t, "source-caps.schema.json"))
 	enum := enumOf(t, defs, "sourceId")
 
+	// 逐项写死：常量被误删/改名/加源时这里先失败，而不是静默跟随 source.IDs()。
 	goIDs := []source.ID{
-		source.Hongguo, source.Huangguo, source.Guipian, source.Hanxiaoquan,
-		source.Huangdou, source.Huangju, source.Yeguo, source.DSD,
-		source.CloudFront, source.Sorani, source.Legacy, source.Xifan, source.Hema,
+		source.Hongguo, source.Hanxiaoquan, source.Guipian, source.Sorani,
+		source.Huangdou, source.Huangju, source.Yeguo, source.DSD, source.Huangguo,
+		source.Xifan, source.Hema,
+	}
+	if len(goIDs) != 11 {
+		t.Fatalf("§4.3 应有 11 个对外站源 ID，得到 %d", len(goIDs))
+	}
+	if ids := source.IDs(); len(ids) != len(goIDs) {
+		t.Fatalf("source.IDs() 有 %d 项，常量表 %d 项", len(ids), len(goIDs))
+	} else {
+		for index, id := range ids {
+			if id != goIDs[index] {
+				t.Errorf("source.IDs()[%d] = %q，常量表为 %q", index, id, goIDs[index])
+			}
+		}
 	}
 	if len(goIDs) != len(enum) {
 		t.Fatalf("Go 站源 ID %d 个，契约 %d 个", len(goIDs), len(enum))
@@ -144,6 +159,79 @@ func TestSourceIDEnumMatchesContract(t *testing.T) {
 		if string(id) != enum[index] {
 			t.Errorf("站源 ID 顺序不一致: Go[%d]=%q 契约[%d]=%q", index, id, index, enum[index])
 		}
+	}
+	// 非站源名不得占对外 ID：cloudfront 是黄果的第三个 facet，legacy 是回退机制。
+	for _, name := range enum {
+		if name == "cloudfront" || name == "legacy" {
+			t.Errorf("契约站源枚举不应含 %q（facet 名 / 回退机制名，按注册表都不是站源）", name)
+		}
+	}
+}
+
+// TestSourceDisplayNamesAndVisibility 锁定注册表里两个 UI 直显事实：
+// 每个对外源都有中文显示名；默认可见（无需解锁）的恰好是 primary 的 4 个。
+func TestSourceDisplayNamesAndVisibility(t *testing.T) {
+	want := map[source.ID]string{
+		source.Hongguo:     "红果",
+		source.Hanxiaoquan: "韩小圈",
+		source.Guipian:     "鬼片",
+		source.Sorani:      "青空",
+		source.Huangdou:    "黄豆",
+		source.Huangju:     "剧果",
+		source.Yeguo:       "野果",
+		source.DSD:         "帝果",
+		source.Huangguo:    "黄果",
+		source.Xifan:       "西饭",
+		source.Hema:        "河马",
+	}
+	ids := source.IDs()
+	if len(want) != len(ids) {
+		t.Fatalf("注册表中文名 %d 个，对外站源 %d 个", len(want), len(ids))
+	}
+	primary := 0
+	for _, id := range ids {
+		if name := source.DisplayName(id); name != want[id] {
+			t.Errorf("DisplayName(%q) = %q，注册表为 %q", id, name, want[id])
+		}
+		if source.RequiresUnlock(id) {
+			continue
+		}
+		primary++
+	}
+	if primary != 4 {
+		t.Errorf("默认可见（无需解锁）的站源应为 4 个，得到 %d", primary)
+	}
+	for _, id := range []source.ID{source.Hongguo, source.Hanxiaoquan, source.Guipian, source.Sorani} {
+		if source.RequiresUnlock(id) {
+			t.Errorf("%q 属注册表 primaryValues，不应要求解锁", id)
+		}
+	}
+	// 需解锁的 7 个 = B 注册表 restrictedValues 的 5 个（黄果按组算一个）+ C 侧独有 2 个。
+	for _, id := range []source.ID{
+		source.Huangdou, source.Huangju, source.Yeguo, source.DSD, source.Huangguo,
+		source.Xifan, source.Hema,
+	} {
+		if !source.RequiresUnlock(id) {
+			t.Errorf("%q 不在 primaryValues 内，应要求解锁", id)
+		}
+		if source.IsPrimary(id) {
+			t.Errorf("%q 不应被判为 primary", id)
+		}
+	}
+	for _, id := range ids {
+		if source.IsPrimary(id) != (source.DisplayName(id) != "" && !source.RequiresUnlock(id)) {
+			t.Errorf("%q 的 primary/解锁判定自相矛盾", id)
+		}
+	}
+	// 未知/复合 ID 没有显示名，也不是「已知的需解锁源」。
+	if got := source.DisplayName("bilibili"); got != "" {
+		t.Errorf("未知 ID 的显示名应为空串，得到 %q", got)
+	}
+	if source.IsKnown("bilibili") || source.IsKnown("hongguo:12345") {
+		t.Error("未知/复合 ID 不应被判为已知站源")
+	}
+	if source.RequiresUnlock("bilibili") || source.RequiresUnlock("hongguo:12345") {
+		t.Error("未知/复合 ID 不应被判为需解锁")
 	}
 }
 

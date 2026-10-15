@@ -3,7 +3,7 @@
 // 理由：§4.4 规定集 ID 形如 "hongguo:12345:2"（ResolveEpisodeID 负责拆出站源），
 // §4.1 规定 Episode.EpisodeID 是「源内不透明 ID，格式 <source>:<...>」。vendor 的 core
 // 用 Chapter{ID: providerChapterID(source, sourceID, chapterKey)} 表达同一件事，
-// 但其前缀是 facet 名（huangguoai / huangguo-video），与契约层的 13 个统一 ID 不同。
+// 但其前缀是 facet 名（huangguoai / huangguo-video / cloudfront），与契约层的 11 个统一 ID 不同。
 // 本文件承担「core 章节 ⇄ 契约 Episode」与复合 ID 的拆装。
 package adapter
 

@@ -82,7 +82,7 @@ func TestSplitEpisodeID(t *testing.T) {
 	}
 }
 
-// TestResolveEpisodeIDAllSources 对 13 个站源 ID 逐个验证 §4.4 的入口。
+// TestResolveEpisodeIDAllSources 对 11 个对外站源 ID 逐个验证 §4.4 的入口。
 func TestResolveEpisodeIDAllSources(t *testing.T) {
 	for _, id := range adapter.SourceIDs() {
 		got, err := adapter.ResolveEpisodeID(string(id) + ":12345:2")
@@ -128,6 +128,7 @@ func TestIDConversionBetweenContractAndCore(t *testing.T) {
 	if _, err := adapter.CoreChapterIDFromEpisodeID("xifan:1:2"); !errors.Is(err, adapter.ErrNotImplementedInCore) {
 		t.Errorf("xifan 应报 ErrNotImplementedInCore，得到 %v", err)
 	}
+	// legacy 不是站源（注册表外的回退机制），不得产出 core 剧 ID。
 	if _, err := adapter.CoreDramaIDFromSeriesID("legacy:1"); !errors.Is(err, adapter.ErrFallbackOnly) {
 		t.Errorf("legacy 应报 ErrFallbackOnly，得到 %v", err)
 	}

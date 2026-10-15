@@ -13,7 +13,7 @@ type Series struct {
 	// ID 是全局剧 ID，形如 "<sourceId>:<sourceKey>"（例 "hongguo:12345"）。
 	// §4.4 的别名链（同一剧在多源上的 ID 互为别名）以此值为键。
 	ID ID `json:"id"`
-	// SourceID 是提供该条数据的站源 ID（13 个之一），不是源内剧 ID
+	// SourceID 是提供该条数据的站源 ID（11 个之一），不是源内剧 ID
 	// ——源内剧 ID 是 ID 中冒号之后的部分。
 	SourceID ID `json:"sourceId"`
 	// Title 是剧名，不可空串（适配层以 core 的 DisplayTitle 兜底）。

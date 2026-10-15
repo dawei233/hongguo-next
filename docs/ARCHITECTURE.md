@@ -228,20 +228,20 @@ hongguo-next/
 │   │   ├── source.go              # Source 接口、Caps 位、ID 编解码
 │   │   ├── registry.go
 │   │   ├── resolver.go            # 跨源聚合搜索 / 剧集去重 / 别名归一
-│   │   ├── providers/
+│   │   ├── providers/             # 目录数 = §4.3 的 11 个对外源
 │   │   │   ├── hongguo/           # B 的 app 签名 + catalog + playback + comment（原样搬入）
-│   │   │   ├── huangguo/          # B 的 ai / video 两个 facet 合并（原样搬入）
+│   │   │   ├── huangguo/          # B 的 ai / video / 旧版（cloudfront）三个 facet 合并（原样搬入）
 │   │   │   ├── guipian/
 │   │   │   ├── hanxiaoquan/
 │   │   │   ├── huangdou/
 │   │   │   ├── huangju/
 │   │   │   ├── yeguo/
 │   │   │   ├── dsd/
-│   │   │   ├── cloudfront/
 │   │   │   ├── sorani/
-│   │   │   ├── legacy/            # 旧版接口自动发现（api host 嗅探）
 │   │   │   ├── xifan/             # ★ 移植 C 的 xifan.js（135 行）
 │   │   │   └── hema/              # ★ 移植 C 的 hema.js（167 行）
+│   │   │                          # 注：黄果旧版是上面 huangguo/ 的 facet；legacy（旧版接口自动发现）
+│   │   │                          # 是 huangguo 内的兜底机制，两者都不另立 provider 目录。
 │   │   └── providers/*_test.go    # 含 B 的 27 个测试（原样保留）
 │   ├── media/                     # ★ 媒体管线（承接 A 的实测能力）
 │   │   ├── pipeline.go            # Resolve → Fetch → Decrypt → Sanitize → Probe
@@ -280,8 +280,10 @@ hongguo-next/
 │       │   └── core_bridge.dart   #   保留 dart:ffi：2 个 C 符号 ⇄ bridge/go/main.go
 │       ├── android/               # ★ Flutter 平台层：Gradle(KTS)、MainActivity.kt、
 │       │                          #   AndroidManifest、res/、jniLibs/libhncore_android.so
-│       ├── ios/                   # ★ Flutter 平台层（B 自带，随 vendor 进仓；非首发目标）
-│       ├── windows/               # ★ Flutter 平台层（同上）
+│       ├── ios/ · windows/        # ⚠ 实测：B 仓这两个目录里**只有生成物**（Flutter/ephemeral、
+│       │                          #   Generated.xcconfig、GeneratedPluginRegistrant），
+│       │                          #   且被 B 自己的 .gitignore 全部排除 → 无工程文件可搬，
+│       │                          #   本仓也不跟踪。首发非目标；要做需先 flutter create 生成工程。
 │       ├── pubspec.yaml           # 包名 duanju_app → hongguo_next；依赖原样保留
 │       └── test/ · integration_test/ · test_driver/   # B 的既有测试，随 vendor 进仓
 │
@@ -330,7 +332,7 @@ flowchart TB
 
     subgraph Core["core/ · 共享 Go 内核"]
         RG["registry<br/>源路由与能力查询"]
-        SRC["source<br/>Source 接口 + 13 个 provider"]
+        SRC["source<br/>Source 接口 + 11 个对外源<br/>（黄果含 3 个 facet）"]
         MED["media<br/>Resolve→Decrypt→Sanitize→Probe<br/>ffmpeg + MP4 净化"]
         DM["danmaku<br/>抓取 + 去重 + 布局"]
         SG["danmaku/sign<br/>Gorgon / Ladon / Argus / SM3 / AES"]
@@ -457,10 +459,10 @@ sequenceDiagram
 | 12 | `B/native/core/provider_*.go`（hongguo/huangguo/huangdou/huangju/yeguo/dsd/sorani/guipian/hanxiaoquan/legacy） | 10 个 provider | `core/source/providers/*` | **原样 vendor** | 同上。10 个 provider 的实现、常量、端点全部保留，与本仓 `Source` 接口对齐时按 §4.1 做薄适配层，不改 provider 内部逻辑。 |
 | 13 | `B/native/core/provider_hongguo_comment_sign.go` | 206 | `core/danmaku/sign/*.go` | **原样 vendor + 用 C 的向量验证** | 弹幕签名原先被列为"全仓最敏感、必须从零重写"。既然两边都是自有/GPL-3.0 授权，**直接采用 B 的实现**，并用 C 的黄金向量（#22）做回归验证 —— 这比自写一份第三实现更可靠。 |
 | 14 | `B/native/core/app_danmaku.go` + `ui_playback_danmaku.go` | 33 + 185 | `core/danmaku/danmaku.go` | **原样 vendor** | 分片抓取（按 `start/duration`）+ 按 `(offset_ms, text)` 生成 identity 合并去重的逻辑保留。 |
-| 15 | `B/native/core/app_build.go`（`buildAllSources` 门控） | — | **删除门控** | **最小改造** | `var buildAllSources = "false"` 及其全部引用（`app_build.go`、`app_build_test.go`、`app_runtime.go:356`、`app_sources_test.go:126`）一并删除，`core/source` 默认全量开放 13 个源（见 §4.5）。原 `-ldflags -X ...buildAllSources=true` 的 `allsources` 构建标签随之消失，CI 少一条矩阵。 |
+| 15 | `B/native/core/app_build.go`（`buildAllSources` 门控） | — | **删除门控** | **最小改造** | `var buildAllSources = "false"` 及其全部引用（`app_build.go`、`app_build_test.go`、`app_runtime.go:356`、`app_sources_test.go:126`）一并删除，`core/source` 默认全量开放 §4.3 的 11 个对外源（见 §4.5）。原 `-ldflags -X ...buildAllSources=true` 的 `allsources` 构建标签随之消失，CI 少一条矩阵。 |
 | 16 | `B/native/bridge/main.go` | 30 | `bridge/go/main.go` | **原样 vendor** | "2 个导出符号 + JSON 字符串进出"的极简 FFI 形状（`DuanjuRequest`/`DuanjuFree`）。**B 的 Flutter 安卓端已经在用这两个符号**（`lib/core_bridge.dart` 经 `dart:ffi` 调用），因此形状原样保留即可，不需要另设计安卓侧 ABI。 |
 | 17 | `B/native/core/*_test.go` | **27 文件** | 随 vendor 一并进仓 | **原样 vendor** | 原先被判为"测试是受保护表达，必须重写等价测试"，现随代码一起搬入。27 个测试文件是本仓 `core-test` 的现成回归网，**必须全绿**才能继续（见 §6）。 |
-| 18 | `B/lib/`、`B/android/`、`B/ios/`、`B/windows/`、`B/test/`、`B/integration_test/` | **84 个 dart 文件 / 30558 行**（另：`android/` 32 文件、`ios/` 7 文件、`windows/` 3 文件平台层） | `apps/android/`（**整端原样 vendor**） | **原样 vendor** | ★ **本行是本次修正的重点，原判"❌ 不搬 / 由 apps/android 重建（Media3）"为错误判断。** B 是 **Flutter 应用**（`pubspec.yaml` → `name: duanju_app`，依赖 `media_kit` / `video_player` / `ffmpeg_kit_flutter_new_min_gpl` / `ffi`），**不是 Media3 原生端**。用户明确指示"安卓版用 guoapp-android 他的"，故 **`lib/` 全量 + `android/`/`ios/`/`windows/` 平台层原样搬进 `apps/android`，不重建**。仅三处最小改造：① `pubspec.yaml` 包名 `duanju_app` → `hongguo_next`；② 主题层改为 `ThemeExtension` 令牌镜像（`DESIGN-SYSTEM.md` §6.1）；③ FFI 随 `core/` 改名对齐。`ios/`+`windows/` 属 B 自带的 Flutter 平台层，随仓保留但本仓首发不做这两端。**`bridge/dart` 的 FFI 绑定即取自这里的 `lib/core_bridge.dart`**（见 §2.1），二者不得各改一份。 |
+| 18 | `B/lib/`、`B/android/`、`B/ios/`、`B/windows/`、`B/test/`、`B/integration_test/` | **84 个 dart 文件 / 30558 行**（另：`android/` 22 个可跟踪文件；**`ios/` 与 `windows/` 无可搬工程文件** —— 实测这两目录里只有 Flutter 生成物且被 B 的 .gitignore 全部排除） | `apps/android/`（**整端原样 vendor**） | **原样 vendor** | ★ **本行是本次修正的重点，原判"❌ 不搬 / 由 apps/android 重建（Media3）"为错误判断。** B 是 **Flutter 应用**（`pubspec.yaml` → `name: duanju_app`，依赖 `media_kit` / `video_player` / `ffmpeg_kit_flutter_new_min_gpl` / `ffi`），**不是 Media3 原生端**。用户明确指示"安卓版用 guoapp-android 他的"，故 **`lib/` 全量 + `android/`/`ios/`/`windows/` 平台层原样搬进 `apps/android`，不重建**。仅三处最小改造：① `pubspec.yaml` 包名 `duanju_app` → `hongguo_next`；② 主题层改为 `ThemeExtension` 令牌镜像（`DESIGN-SYSTEM.md` §6.1）；③ FFI 随 `core/` 改名对齐。⚠ **更正（M4 实测）**：`ios/` 与 `windows/` 在 B 仓里**只有生成物**（`Flutter/ephemeral`、`Generated.xcconfig`、`GeneratedPluginRegistrant`），且被 B 自己的 `.gitignore` 排除 → **无工程文件可 vendor**，本仓不跟踪这两端；要做需先 `flutter create` 生成工程。原文所谓 7 文件 / 3 文件平台层，是把生成物当源码数了。**`bridge/dart` 的 FFI 绑定即取自这里的 `lib/core_bridge.dart`**（见 §2.1），二者不得各改一份。 |
 | 19 | `B/NOTICE`、`THIRD-PARTY-NOTICES.md` | — | 并入本仓 `NOTICE` | **改造（已定为对外可发布的独立章节）** | 沿用 B 的来源链路声明格式，但覆盖本仓实际情况，落为 `NOTICE` **第三节**（B 链路采用方式与合规定性）—— **已决事实，无待办**。五块内容：① **全链署名**：本仓 ← 本方 fork `dawei233/guoapp-android`（`ff3bad2`，含本方 57 个提交）← 上游① [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp)（上游链接 + **仍在活跃开发**的事实 + **未声明许可证**）← 上游②「鱼佬」的短剧库 APP（**来自互联网，原始仓库与许可信息均未提供、无法进一步核实**，链条到此为止）；② **授权范围如实收窄**：本仓仅就版权人**本人编写/修改的部分**以 GPL-3.0 授权，对 B 链路上游派生部分**仅作署名与来源记录，既不主张授权、也不声称已获授权**，并声明本仓不是该部分的权利人；③ **合规响应通道**：权利人经 Issue 联系，本仓配合处理（含**移除相关内容**、补充署名、下架）；④ **使用者提示**：B 链路派生部分上游未声明许可，**使用者需自行评估**；⑤ **与 C（GPL-3.0，可正常再分发）和 A（自有）的区分表**。另记：B 自身 README 有"在未获得上游授权前，请勿将本项目用于任何商业用途或对外分发"一句，`NOTICE` 第三节 3.6 明确写出本仓**不沿用**该前置（直接采用 + 公开分发），并说明二者是知情下的不同取舍 —— **不留含混**。 |
 
 ### 3.3 PC 端（来自 C，GPL-3.0 —— 直接搬运/移植）
@@ -699,47 +701,49 @@ type Source interface {
 | `CapDanmaku` | 提供真弹幕（带时间轴） |
 | `CapWebCommentFallback` | 可提供无签名评论作为降级弹幕 |
 
-### 4.3 实际源清单（去重后 13 个）
+### 4.3 实际源清单（对外去重后 11 个）
 
-原始来源计数：A 4 个、B 11 个 source 常量、C 3 个。
+> **v5 修正（本次 M1 返工）**：上一版按 core 的 provider 常量计数，得到「13 个源」，**多算了两个**：`cloudfront`（黄果旧版）是黄果的**第三个 facet** 而非独立源；`legacy`（旧接口自动发现）是**回退机制**而非源，注册表里根本没有它。权威依据是 B 的站源注册表 `lib/models.dart` 的 `SourceSite.primaryValues` / `restrictedValues`（B 端 UI 的站源列表即由它派生，`groupId` / `groupName` / `entryName` 三个 getter 是黄果分组的铁证）。因此对外源是 **11 个**：默认可见 4 个 + 解锁后可见 5 个（黄果算一个）+ C 侧移植 2 个。
 
-**重复情况**
+原始来源计数：A 4 个、B 11 个 source 常量（其中 3 个是黄果的 facet、1 个是机制名）、C 3 个。
+
+**重复与合并情况**
 
 | 源 | 出现在 A | 出现在 B | 出现在 C | 结论 |
 |---|:--:|:--:|:--:|---|
 | `hongguo` | ✅ | ✅ | ✅ | **三方重复**。单一实现，最完整。以 B 的 Go 签名为算法基线（已实测可用），叠加 A 的解密/净化实测结论。 |
 | `guipian` | ✅ | ✅ | — | 二方重复，B 版本更新（Go 化 + 有 provider 测试）。 |
 | `hanxiaoquan` | ✅ | ✅ | — | 二方重复，同上。 |
-| `huangguo` | ✅ | ✅（`huangguoai` + `huangguo-video` 两个 facet） | — | 二方重复。**合并为一个 source，facet 变成内部枚举**，对外 ID 用 `huangguo`。 |
+| `huangguo` | ✅ | ✅（`huangguoai` + `huangguo-video` + `cloudfront` 三个 facet） | — | 二方重复。**合并为一个 source，三个 facet 变成内部枚举**，对外 ID 用 `huangguo`。注册表把三者归为同一组：`groupId = 'huangguo'`、组名「黄果」、`entryName` 依次「AI」「视频」「旧版」。 |
+| `cloudfront` | — | ✅ | — | **不是独立源**：它是 `huangguo` 的旧版 facet（注册表 `entryName = 旧版`），随黄果一起合并；core 里那个同名 provider 常量属实现层，不对应对外 ID。 |
+| `legacy` | — | ✅（机制名） | — | **不是源**：注册表里没有它。「旧接口自动发现」是回退机制，探测到旧接口后产出的剧/集一律以黄果旧版 facet 为源（`provider_legacy_app.go`），因此不占对外 ID；识别到该名字一律显式拒绝（`adapter.ErrFallbackOnly`）。 |
 | `xifan` | — | — | ✅ | **C 独有**，移植 C 的 `xifan.js` 到 Go。 |
 | `hema` | — | — | ✅ | **C 独有**，移植 C 的 `hema.js` 到 Go。 |
 | `huangdou` | — | ✅ | — | B 独有。 |
 | `huangju` | — | ✅ | — | B 独有。 |
 | `yeguo` | — | ✅ | — | B 独有。 |
 | `dsd` | — | ✅ | — | B 独有。 |
-| `cloudfront` | — | ✅ | — | B 独有（特殊用途源）。 |
 | `sorani` | — | ✅ | — | B 独有。 |
-| `legacy` | — | ✅ | — | B 独有（"旧接口自动发现"，不是真站源，是 fallback 机制）。 |
 
-**去重后最终 13 个 Source 实现**
+**去重后最终 11 个对外 Source 实现**（顺序即规范顺序；中文名取自注册表的 `name`）
 
-| # | ID | 来源 | 预计 Caps |
-|---|---|---|---|
-| 1 | `hongguo` | B（+A 实测） | Search, Category, Rank, MultiQuality, EncryptedPlay, MP4Sanitize, Danmaku |
-| 2 | `huangguo` | B（+A 合并） | Search, Category, Rank, EncryptedPlay, MP4Sanitize |
-| 3 | `guipian` | B | Search, Category, MultiQuality, DirectPlay |
-| 4 | `hanxiaoquan` | B | Search, MultiQuality, DirectPlay |
-| 5 | `huangdou` | B | Search, MultiQuality, EncryptedPlay, MP4Sanitize |
-| 6 | `huangju` | B | Search, Rank, MultiQuality, DirectPlay |
-| 7 | `yeguo` | B | Search, MultiQuality, DirectPlay |
-| 8 | `dsd` | B | Search, Category, MultiQuality, EncryptedPlay |
-| 9 | `cloudfront` | B | DirectPlay（专用） |
-| 10 | `sorani` | B | Search, MultiQuality, DirectPlay |
-| 11 | `legacy` | B | Search（动态发现，作为其他源失败时的 fallback） |
-| 12 | `xifan` | C 移植 | Search, Category, MultiQuality, DirectPlay |
-| 13 | `hema` | C 移植 | Search, Category, MultiQuality, DirectPlay |
+| # | ID | 中文名 | 可见性 | 来源 | 预计 Caps |
+|---|---|---|---|---|:---:|---|
+| 1 | `hongguo` | 红果 | 默认可见 | B（+A 实测） | Search, Category, Rank, MultiQuality, EncryptedPlay, MP4Sanitize, Danmaku |
+| 2 | `hanxiaoquan` | 韩小圈 | 默认可见 | B | Search, MultiQuality, DirectPlay |
+| 3 | `guipian` | 鬼片 | 默认可见 | B | Search, Category, MultiQuality, DirectPlay |
+| 4 | `sorani` | 青空 | 默认可见 | B | Search, MultiQuality, DirectPlay |
+| 5 | `huangdou` | 黄豆 | 需解锁 | B | Search, MultiQuality, EncryptedPlay, MP4Sanitize |
+| 6 | `huangju` | 剧果 | 需解锁 | B | Search, Rank, MultiQuality, DirectPlay |
+| 7 | `yeguo` | 野果 | 需解锁 | B | Search, MultiQuality, DirectPlay |
+| 8 | `dsd` | 帝果 | 需解锁 | B | Search, Category, MultiQuality, EncryptedPlay |
+| 9 | `huangguo` | 黄果（facet：AI / 视频 / 旧版） | 需解锁 | B | Search, Category, Rank, **DirectPlay**, EncryptedPlay, MP4Sanitize（三个 facet 的并集；DirectPlay 来自旧版 facet） |
+| 10 | `xifan` | 西饭 | 需解锁 | C 移植 | Search, Category, MultiQuality, DirectPlay |
+| 11 | `hema` | 河马 | 需解锁 | C 移植 | Search, Category, MultiQuality, DirectPlay |
 
-> 能力矩阵的**初始值是待验证的假设**，必须在 M3 阶段逐源实测后修正，修正结果写进 `core/source/source_caps_test.go` 的黄金表。
+> Go 侧一一对应：`core/source/source.go` 的 ID 常量（含中文名 `DisplayName` 与 `IsPrimary` / `RequiresUnlock`）、`contracts/source-caps.schema.json` 的 `$defs.sourceId.enum`，以及 `core/source/adapter` 的 `SourceIDs()` / `CoreSources()`（黄果在此展开为 `huangguoai` / `huangguo-video` / `cloudfront` 三个 core provider 名）。四处顺序一致，由 `core/source/source_caps_test.go` 与 `core/source/adapter/id_test.go` 断言。
+>
+> 能力矩阵的**初始值是待验证的假设**，必须在 M3 阶段逐源实测后修正，修正结果写进 `core/source/source_caps_test.go` 的黄金表；黄果必须按 facet 分别实测。
 
 ### 4.4 注册与路由
 
@@ -761,7 +765,7 @@ flowchart LR
     R --> P1["hongguo"]
     R --> P2["guipian"]
     R --> P3["xifan"]
-    R --> Pn["… 共 13 个"]
+    R --> Pn["… 共 11 个"]
     P1 & P2 & P3 & Pn --> AG["resolver.Aggregate<br/>12s 超时 · 归一去重"]
     AG --> AL["别名链<br/>hongguo:12345 ≡ hema:678"]
     AL --> U["统一 Series ID"]
@@ -771,7 +775,7 @@ flowchart LR
 
 ### 4.5 与 B 的 edition 门控的差异
 
-B 用 `-ldflags="-X .../core.buildAllSources=true"` 在构建期只暴露部分源（默认仅 `hongguo`）。**本仓删除这个门控**（vendor 时一并移除，见 §3.2 #15）：13 个源默认全开，理由是
+B 用 `-ldflags="-X .../core.buildAllSources=true"` 在构建期只暴露部分源（默认仅 `hongguo`）。**本仓删除这个门控**（vendor 时一并移除，见 §3.2 #15）：§4.3 的 11 个对外源默认全开，理由是
 1. 门控是为"合规/审核收缩产品面"设计的，本仓定位是自用聚合器；全仓 GPL-3.0 后更无收缩产品面的理由；
 2. 门控会让 CI 与本地行为不一致，是长期 bug 源；删掉它同时消掉 CI 的一条 `allsources` 矩阵；
 3. 若将来真需要，按 `config.json` 的 `enabledSources` 在**运行期**过滤，不动构建。
@@ -986,7 +990,7 @@ jobs:
 | **M1 契约与 vendor**（原 M0 许可工作已整段取消 —— 许可事项已决，无待办前置，直接从这里开工） | ① `B/native/core/**`（121 文件 / 24035 行）+ `bridge/main.go` 原样 vendor 进 `core/`，module 前缀替换；② 删除 `buildAllSources` 门控及其全部引用；③ 27 个测试跑通；④ `contracts/*.schema.json`、`core/source` 接口与 Caps 薄适配层（把 B 的 source id 与 `Drama`/`Task` 形状对到 §4.1 的 `Series`/`Episode`/`Stream`）；⑤ **建立 `legacy/SOURCES.md` 上游跟踪台账**：B/C 两条登记上游 URL、上游 SHA、本方 fork SHA 与 `last_triaged`（§1.3）；⑥ 按 §3.4.1 完成 `NOTICE` 第三节（B 链路采用方式与合规定性）与捆绑组件的对外声明 | `go vet`/`go test -race` 三平台全绿；27 个测试无跳过；`legacy/SOURCES.md` 含 B/C 全部跟踪字段；`NOTICE` 第三节含全链署名、收窄后的授权范围、响应通道与使用者提示 | **5–7 人日** |
 | **M2 弹幕** | 搬 C 的 `danmaku.js`/`danmaku-sign.js`（JS→Go 移植）并与 B 的实现合并；搬 `danmaku-sign-vectors.json` + `danmaku-sign.test.cjs` 为 `core/danmaku/testdata/` 与 `sign_test.go`；`sm3.js` 移植；`layout.go` 与降级源 | 向量逐字节一致；nightly 直播冒烟通过 | **3–5 人日** |
 | **M3 站源与媒体** | ① 10 个 B provider 随 vendor 到位，仅做接口对齐与 Caps 实测校准；② `xifan.js`/`hema.js` 移植（302 行 → Go）；③ `mp4_sanitize.py` 移植为 `core/media/{sanitize,boxes}.go`；④ ffmpeg 解密链路 + 边下边播 | 每源 fixture 单测通过 + 实际播放成功；一集 1080p HEVC 加密档从抓到播全链路通过 | **5–8 人日** |
-| **M4 端侧** | `apps/desktop`（Electron + React 19，含**新写 UI 与 `@videojs/react` 10.x 播放器**）、`apps/android`（**整端 vendor B 的 Flutter 端**：`lib/` 84 文件 / 30558 行 + `android/ios/windows` 平台层 + `pubspec` 改名 + 令牌镜像；FFI 走 `bridge/dart`，**不重建 UI**）、发布流水线（含 ffmpeg 对应源码包） | 双端各发布一个可安装包；`flutter analyze`/`flutter test` 全绿；PC 端播放器不出现 `videojs()` v8 写法；安装包内含 NOTICE/LICENSE/源码包 | **9–13 人日** |
+| **M4 端侧** | `apps/desktop`（Electron + React 19，含**新写 UI 与 `@videojs/react` 10.x 播放器**）、`apps/android`（**整端 vendor B 的 Flutter 端**：`lib/` 84 文件 / 30558 行 + `android/ios/windows` 平台层 + `pubspec` 改名 + 令牌镜像；FFI 走 `bridge/dart`，**不重建 UI**）、发布流水线（含 ffmpeg 对应源码包） | 双端各发布一个可安装包；**`flutter test` 与上游基线逐条一致（零回归）** —— 上游本身有 7 个失败用例，全绿不是可达标准；`dart analyze` 与上游同为 106 条且改动文件 0 条新增；PC 端播放器不出现 `videojs()` v8 写法；安装包内含 NOTICE/LICENSE/源码包 | **9–13 人日** |
 
 **依赖方向图**：`M1 → (M2 ∥ M3) → M4`。
 
@@ -994,7 +998,7 @@ jobs:
 
 安卓端的 Flutter 端 vendor **不在关键路径的新增项上**：它是整端搬运 + 三处最小改造（包名、令牌镜像、FFI 改名），而不是"重写 + 对齐"；风险从"能不能写出来"进一步降为"vendor 能不能编过、测试能不能过"。
 
-原先的关键路径是"重写弹幕签名三实现 → 重写 13 个 provider → 重写媒体管线"，全是**从零实现**的串行长链，任何一环失败都会拖垮全局。现在关键路径上**只剩一项真正的开发工作**：Python → Go 的 MP4 净化移植（300 行），其余节点都是"搬运 + 对齐 + 验证"。这也是本次修订最大的收益 —— **风险从"能不能写出来"降为"搬过来能不能跑通"**。
+原先的关键路径是"重写弹幕签名三实现 → 重写 11 个对外源（黄果含 3 个 facet）→ 重写媒体管线"，全是**从零实现**的串行长链，任何一环失败都会拖垮全局。现在关键路径上**只剩一项真正的开发工作**：Python → Go 的 MP4 净化移植（300 行），其余节点都是"搬运 + 对齐 + 验证"。这也是本次修订最大的收益 —— **风险从"能不能写出来"降为"搬过来能不能跑通"**。
 
 ---
 
@@ -1012,4 +1016,4 @@ jobs:
 | ffmpeg/x264 对应源码未随 Release 发布 → 违反 GPL-3.0 第 6 条 | 🔴 高 | `release` job 强制产出对应源码包并在 `NOTICE` 写获取路径；**只给上游链接不满足义务**，必须是与被分发二进制完全对应的源码 + 构建脚本 + 哈希 |
 | 上游第三方权利人（`zhoufuweigg/guoapp`、「鱼佬」）主张权利 | 🟡 中 | **处置已决（不是待办、也不去索取许可）**：版权人已决定**直接采用**，以**完整如实署名**承担 —— `NOTICE` 第三节 3.1 记全链来源（含上游②「鱼佬」"来自互联网、原仓与许可均无法核实"）、3.2 如实收窄授权范围（本仓**仅就本人编写/修改的部分**以 GPL-3.0 授权；上游派生部分**仅署名记录，不主张、不声称已获授权**）、**3.3 合规响应通道**（权利人经 Issue 联系，本仓配合处理**含移除相关内容**）、3.4 使用者自行评估提示。同步落点见 §3.4.1–§3.4.3、`README.md`「许可与合规」 |
 | **vendored 快照持续落后于两个活跃上游** → 站源/播放修复拿不到、源悄悄失效 | 🔴 高 | 这是本次修正暴露的**真实工程变更**：`legacy/SOURCES.md` 登记上游 URL + 上游 SHA + 本方 fork SHA；按 **§1.3.2** 的节奏（每里程碑 + 每月）评估 `upstream_ref..upstream/main`，对站源失效修复 / 播放修复 / 弹幕签名调整做**定向 cherry-pick**，并登记 `backports`；**不以 merge/rebase 同步**（本仓是整合重写）。源侧另有 nightly 巡检兜底（见下行） |
-| 源方接口频繁变更 → 13 源维护负担 | 🟡 中 | 统一 `Source` 接口让每个源改动面 < 300 行；nightly 巡检定位失效源 |
+| 源方接口频繁变更 → 11 个对外源（黄果 3 facet）的维护负担 | 🟡 中 | 统一 `Source` 接口让每个源改动面 < 300 行；nightly 巡检定位失效源 |

@@ -1,8 +1,8 @@
 // 本仓新增（M1 站源适配层测试）。
 //
 // §4.3 要求能力矩阵的黄金表可核对、且「初始值是待验证的假设」。本文件是那张黄金表的
-// 断言副本：13 行逐行锁定，顺序即 §4.3 表格顺序；M3 逐源实测修正时，改这里与
-// adapter/caps.go 的 assumedCaps 两处。
+// 断言副本：11 行逐行锁定，顺序即 §4.3 表格顺序；M3 逐源实测修正时，改这里与
+// adapter/caps.go 的 assumedCaps 两处（黄果需按 facet 分别实测，见下）。
 package adapter_test
 
 import (
@@ -19,16 +19,16 @@ var capsGolden = []struct {
 	names []string
 }{
 	{source.Hongguo, []string{"search", "category", "rank", "multiQuality", "encryptedPlay", "mp4Sanitize", "danmaku"}},
-	{source.Huangguo, []string{"search", "category", "rank", "encryptedPlay", "mp4Sanitize"}},
-	{source.Guipian, []string{"search", "category", "multiQuality", "directPlay"}},
 	{source.Hanxiaoquan, []string{"search", "multiQuality", "directPlay"}},
+	{source.Guipian, []string{"search", "category", "multiQuality", "directPlay"}},
+	{source.Sorani, []string{"search", "multiQuality", "directPlay"}},
 	{source.Huangdou, []string{"search", "multiQuality", "encryptedPlay", "mp4Sanitize"}},
 	{source.Huangju, []string{"search", "rank", "multiQuality", "directPlay"}},
 	{source.Yeguo, []string{"search", "multiQuality", "directPlay"}},
 	{source.DSD, []string{"search", "category", "multiQuality", "encryptedPlay"}},
-	{source.CloudFront, []string{"directPlay"}},
-	{source.Sorani, []string{"search", "multiQuality", "directPlay"}},
-	{source.Legacy, []string{"search"}},
+	// directPlay 来自并入本 ID 的第三个 facet（cloudfront / 注册表 entryName「旧版」）：
+	// 旧接口剧库返回直链，M3 实测须按 facet 逐项核对。
+	{source.Huangguo, []string{"search", "category", "rank", "directPlay", "encryptedPlay", "mp4Sanitize"}},
 	{source.Xifan, []string{"search", "category", "multiQuality", "directPlay"}},
 	{source.Hema, []string{"search", "category", "multiQuality", "directPlay"}},
 }
@@ -104,14 +104,16 @@ func TestAssumedCapsSpotChecks(t *testing.T) {
 	if hongguo.Has(source.CapDirectPlay) {
 		t.Fatalf("红果假设不含 directPlay: %s", hongguo)
 	}
-	// cloudfront 是 §4.3 里唯一只声明 directPlay 的专用源。
-	cloudfront, _ := adapter.AssumedCaps(source.CloudFront)
-	if cloudfront != source.CapDirectPlay {
-		t.Fatalf("cloudfront 假设能力 = %s", cloudfront)
+	// 黄果的三个 facet 合并后，能力是并集：旧版 facet（cloudfront）的 directPlay 必须在这一行里，
+	// 否则 M1「只合并 ai + video 两个 facet」的漏项会重现。
+	huangguo, _ := adapter.AssumedCaps(source.Huangguo)
+	if !huangguo.Has(source.CapDirectPlay) || !huangguo.Has(source.CapEncryptedPlay) {
+		t.Fatalf("黄果假设能力应含旧版 facet 的 directPlay 与 AI/video facet 的 encryptedPlay: %s", huangguo)
 	}
-	// legacy 是 fallback 机制，§4.3 假设里只声明了搜索。
-	legacy, _ := adapter.AssumedCaps(source.Legacy)
-	if legacy != source.CapSearch {
-		t.Fatalf("legacy 假设能力 = %s", legacy)
+	// facet 名不是站源 ID：按 ID 查能力必须被拒（cloudfront / legacy 都不是对外源）。
+	for _, name := range []source.ID{"cloudfront", "legacy"} {
+		if _, err := adapter.AssumedCaps(name); !errors.Is(err, adapter.ErrUnknownSource) {
+			t.Errorf("AssumedCaps(%q) 应报 ErrUnknownSource（facet 名/回退机制名不是站源 ID），得到 %v", name, err)
+		}
 	}
 }

@@ -29,7 +29,7 @@
     },
     "sourceId": {
       "$ref": "source-caps.schema.json#/$defs/sourceId",
-      "description": "站源 ID（13 个之一，见 source-caps.schema.json）。"
+      "description": "站源 ID（11 个之一，见 source-caps.schema.json）。"
     },
     "Caps": {
       "$ref": "source-caps.schema.json#/$defs/caps",

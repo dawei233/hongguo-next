@@ -29,20 +29,18 @@
       "type": "string",
       "enum": [
         "hongguo",
-        "huangguo",
-        "guipian",
         "hanxiaoquan",
+        "guipian",
+        "sorani",
         "huangdou",
         "huangju",
         "yeguo",
         "dsd",
-        "cloudfront",
-        "sorani",
-        "legacy",
+        "huangguo",
         "xifan",
         "hema"
       ],
-      "description": "§4.3 去重后的 13 个站源 ID（对外唯一 ID，非空、不可空）。huangguo 的 ai / video 两个 facet 在契约层合并为本 ID；legacy 是「旧接口自动发现」的 fallback 机制而非真站源。"
+      "description": "§4.3 去重后的 11 个对外站源 ID（对外唯一 ID，非空、不可空），顺序为规范顺序：默认可见（hongguo / hanxiaoquan / guipian / sorani）→ 解锁后可见（huangdou / huangju / yeguo / dsd / huangguo）→ C 侧移植（xifan / hema）。huangguo 的 video / AI / 旧版（cloudfront）三个 facet 在契约层合并为本 ID。\"legacy\"（旧接口自动发现）不是站源、是回退机制，不在本枚举内，出现即视为非法输入。"
     },
     "capBit": {
       "type": "string",

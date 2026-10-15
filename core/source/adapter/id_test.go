@@ -1,7 +1,7 @@
 // 本仓新增（M1 站源适配层测试）。
 //
-// 覆盖：13 个已知站源 ID 的正向/反向映射、core 的 facet 名与主机名别名，
-// 以及未知 ID 的全部拒绝路径（含 legacy 的「fallback 机制」与 xifan/hema 的「尚无实现」）。
+// 覆盖：11 个已知站源 ID 的正向/反向映射、core 的 facet 名与主机名别名，
+// 以及未知 ID 的全部拒绝路径（含 legacy 的「回退机制」与 xifan/hema 的「尚无实现」）。
 package adapter_test
 
 import (
@@ -12,11 +12,11 @@ import (
 	"github.com/dawei233/hongguo-next/core/source/adapter"
 )
 
-// TestSourceIDKnownIDs 覆盖 §4.3 的全部 13 个站源 ID（每个都必须自映射）。
+// TestSourceIDKnownIDs 覆盖 §4.3 的全部 11 个对外站源 ID（每个都必须自映射）。
 func TestSourceIDKnownIDs(t *testing.T) {
 	ids := adapter.SourceIDs()
-	if len(ids) != 13 {
-		t.Fatalf("§4.3 应有 13 个站源 ID，得到 %d", len(ids))
+	if len(ids) != 11 {
+		t.Fatalf("§4.3 应有 11 个对外站源 ID，得到 %d", len(ids))
 	}
 	for _, id := range ids {
 		got, err := adapter.SourceID(string(id))
@@ -40,12 +40,15 @@ func TestSourceIDCoreAliases(t *testing.T) {
 		{" hongguo ", source.Hongguo},
 		{"hongguoduanju.com", source.Hongguo},
 		{"www.hongguoduanju.com", source.Hongguo},
-		// huangguo 的两个 facet 合并为同一个 §4.1 ID（§4.3）。
+		// huangguo 的三个 facet 合并为同一个 §4.1 ID（§4.3）：
+		// ai、video、旧版（cloudfront）。
 		{"huangguo", source.Huangguo},
 		{"huangguoai", source.Huangguo},
 		{"huangguoai.com", source.Huangguo},
 		{"huangguo-video", source.Huangguo},
 		{"huangguo.video", source.Huangguo},
+		{"cloudfront", source.Huangguo},
+		{"CLOUDFRONT", source.Huangguo},
 		{"huangdou", source.Huangdou},
 		{"tideember.cc", source.Huangdou},
 		{"xqjurgek.top", source.Huangdou},
@@ -56,14 +59,12 @@ func TestSourceIDCoreAliases(t *testing.T) {
 		{"delta.ygrwdsgt.cc", source.Yeguo},
 		{"dsd", source.DSD},
 		{"www.dsd.com.se", source.DSD},
-		{"cloudfront", source.CloudFront},
 		{"sorani", source.Sorani},
 		{"api.sorani.cc", source.Sorani},
 		{"guipian", source.Guipian},
 		{"www.guipianwu.com", source.Guipian},
 		{"hanxiaoquan", source.Hanxiaoquan},
 		{"jennyhow.com", source.Hanxiaoquan},
-		{"legacy", source.Legacy},
 		{"xifan", source.Xifan},
 		{"hema", source.Hema},
 		// 主机后缀规则（复刻 core 的 providerSourceForURL）。
@@ -80,6 +81,25 @@ func TestSourceIDCoreAliases(t *testing.T) {
 		}
 		if got != item.want {
 			t.Errorf("SourceID(%q) = %q，期望 %q", item.raw, got, item.want)
+		}
+	}
+	// 黄果组内的中文入口名（注册表的 entryName）：组名用 DisplayName(huangguo)=「黄果」。
+	facets := []struct {
+		name  string
+		entry string
+	}{
+		{"huangguoai", "AI"},
+		{"huangguo-video", "视频"},
+		{"cloudfront", "旧版"},
+	}
+	for _, facet := range facets {
+		if entry := adapter.FacetEntryName(facet.name); entry != facet.entry {
+			t.Errorf("FacetEntryName(%q) = %q，注册表为 %q", facet.name, entry, facet.entry)
+		}
+	}
+	for _, name := range []string{"hongguo", "", "huangguo"} {
+		if entry := adapter.FacetEntryName(name); entry != "" {
+			t.Errorf("FacetEntryName(%q) 应为空串（不是黄果的 facet），得到 %q", name, entry)
 		}
 	}
 }
@@ -123,7 +143,7 @@ func TestSourceIDForURL(t *testing.T) {
 	}
 }
 
-// TestSourceIDRejectsUnknown 覆盖未知/空/非法输入的拒绝路径。
+// TestSourceIDRejectsUnknown 覆盖未知/空/非法输入的拒绝路径，以及「回退机制名」的专属拒绝。
 func TestSourceIDRejectsUnknown(t *testing.T) {
 	for _, raw := range []string{"", "   ", "bilibili", "hongguo-x", "unknown.example.com", "..", "a."} {
 		id, err := adapter.SourceID(raw)
@@ -135,14 +155,22 @@ func TestSourceIDRejectsUnknown(t *testing.T) {
 			t.Errorf("SourceID(%q) 的错误没有包装 ErrUnknownSource/ErrInvalidID: %v", raw, err)
 		}
 	}
+	// legacy（旧接口自动发现）不是站源：必须报 ErrFallbackOnly 而不是「未知源」，
+	// 让调用方能区分「这是回退机制」与「源名拼错了」。
+	for _, raw := range []string{"legacy", "LEGACY", " legacy "} {
+		id, err := adapter.SourceID(raw)
+		if !errors.Is(err, adapter.ErrFallbackOnly) {
+			t.Errorf("SourceID(%q) 应报 ErrFallbackOnly，得到 %q, %v", raw, id, err)
+		}
+	}
 }
 
-// TestCoreSources 覆盖反向映射：主 facet、多 facet 展开与三条拒绝路径。
+// TestCoreSources 覆盖反向映射：单 facet 源、黄果的多 facet 展开与三条拒绝路径。
 func TestCoreSources(t *testing.T) {
-	// 每个已落地的站源都必须能反查到 core 的 provider 源名。
+	// 每个单 facet 站源都必须能反查到 core 的 provider 源名。
 	for _, id := range []source.ID{
-		source.Hongguo, source.Guipian, source.Hanxiaoquan, source.Huangdou,
-		source.Huangju, source.Yeguo, source.DSD, source.CloudFront, source.Sorani,
+		source.Hongguo, source.Hanxiaoquan, source.Guipian, source.Sorani,
+		source.Huangdou, source.Huangju, source.Yeguo, source.DSD,
 	} {
 		names, err := adapter.CoreSources(id)
 		if err != nil {
@@ -156,13 +184,13 @@ func TestCoreSources(t *testing.T) {
 		}
 	}
 
-	// huangguo 是 §4.3 合并的两个 facet：反向必须展开，且主 facet 与 core 的
-	// canonicalProviderSource（裸 "huangguo" → huangguoai）一致。
+	// huangguo 是 §4.3 合并的三个 facet（AI / 视频 / 旧版）：反向必须全部展开，
+	// 且主 facet 与 core 的 canonicalProviderSource（裸 "huangguo" → huangguoai）一致。
 	names, err := adapter.CoreSources(source.Huangguo)
 	if err != nil {
 		t.Fatalf("CoreSources(huangguo) 失败: %v", err)
 	}
-	if len(names) != 2 || names[0] != "huangguoai" || names[1] != "huangguo-video" {
+	if len(names) != 3 || names[0] != "huangguoai" || names[1] != "huangguo-video" || names[2] != "cloudfront" {
 		t.Fatalf("CoreSources(huangguo) = %v", names)
 	}
 	if primary, err := adapter.PrimaryCoreSource(source.Huangguo); err != nil || primary != "huangguoai" {
@@ -174,13 +202,19 @@ func TestCoreSources(t *testing.T) {
 	if again[0] != "huangguoai" {
 		t.Fatal("CoreSources 必须返回副本")
 	}
-
-	// legacy：§4.3 的 fallback 机制，没有独立 provider 源名。
-	if _, err := adapter.CoreSources(source.Legacy); !errors.Is(err, adapter.ErrFallbackOnly) {
-		t.Errorf("legacy 应报 ErrFallbackOnly，得到 %v", err)
+	// 改副本也不能污染 facet 入口名表。
+	if entry := adapter.FacetEntryName("cloudfront"); entry != "旧版" {
+		t.Fatalf("facet 入口名表被调用方污染: cloudfront → %q", entry)
 	}
-	if _, err := adapter.PrimaryCoreSource(source.Legacy); !errors.Is(err, adapter.ErrFallbackOnly) {
-		t.Errorf("PrimaryCoreSource(legacy) 应报 ErrFallbackOnly，得到 %v", err)
+
+	// legacy：注册表之外的「旧接口自动发现」回退机制，不占对外 ID、没有 provider 源名。
+	for _, legacy := range []source.ID{source.ID("legacy"), source.ID("LEGACY")} {
+		if _, err := adapter.CoreSources(legacy); !errors.Is(err, adapter.ErrFallbackOnly) {
+			t.Errorf("CoreSources(%q) 应报 ErrFallbackOnly，得到 %v", legacy, err)
+		}
+		if _, err := adapter.PrimaryCoreSource(legacy); !errors.Is(err, adapter.ErrFallbackOnly) {
+			t.Errorf("PrimaryCoreSource(%q) 应报 ErrFallbackOnly，得到 %v", legacy, err)
+		}
 	}
 	// xifan / hema：C 侧独有源，本仓 core 尚无实现（§3.3 计划 M3/M4 移植）。
 	for _, id := range []source.ID{source.Xifan, source.Hema} {
@@ -191,7 +225,7 @@ func TestCoreSources(t *testing.T) {
 			t.Errorf("PrimaryCoreSource(%q) 应报 ErrNotImplementedInCore，得到 %v", id, err)
 		}
 	}
-	// 未知 ID。
+	// 未知 ID（facet 名与 core 内部名都不是契约 ID）。
 	for _, id := range []source.ID{"", "bilibili", "hongguoai"} {
 		if _, err := adapter.CoreSources(id); !errors.Is(err, adapter.ErrUnknownSource) {
 			t.Errorf("CoreSources(%q) 应报 ErrUnknownSource，得到 %v", id, err)
@@ -204,7 +238,7 @@ func TestSeriesIDRejectsUnimplemented(t *testing.T) {
 	if _, err := adapter.SeriesID(source.Xifan, "42"); !errors.Is(err, adapter.ErrNotImplementedInCore) {
 		t.Errorf("xifan 不应生成契约剧 ID，得到 %v", err)
 	}
-	if _, err := adapter.SeriesID(source.Legacy, "42"); !errors.Is(err, adapter.ErrFallbackOnly) {
+	if _, err := adapter.SeriesID(source.ID("legacy"), "42"); !errors.Is(err, adapter.ErrFallbackOnly) {
 		t.Errorf("legacy 不应生成契约剧 ID，得到 %v", err)
 	}
 	if _, err := adapter.SeriesID(source.Hongguo, "  "); !errors.Is(err, adapter.ErrInvalidID) {
