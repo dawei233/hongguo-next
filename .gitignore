@@ -5,3 +5,7 @@ build/
 .dart_tool/
 *.log
 .DS_Store
+
+# Go
+/hnbridge
+*.test

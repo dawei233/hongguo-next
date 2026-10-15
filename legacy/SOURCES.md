@@ -43,9 +43,21 @@ B:
                             → apps/android/  # 84 dart 文件 / 30558 行，整端 vendor
   modified:
     - "pubspec name: duanju_app → hongguo_next"   # 引号必需：含 ": " 否则会被 YAML 解析成嵌套映射
-    - theme layer → ThemeExtension<HongguoTokens>
+    - theme layer → ThemeExtension<HongguoTokens>   # 待 M4
+    - "core/go.mod module: duanjuapp/native → github.com/dawei233/hongguo-next/core"
+    - "bridge/go/main.go import 路径随之改写；C 符号名与 JSON 进出形状不变（ABI 冻结）"
+    - "core/app_build_test.go 断言按无门控语义重写；测试名 …RestrictsScheduling → …SchedulesAllSources"
+    - "core/app_sources_test.go 去掉 buildAllSources 的 t.Skip"
   removed:
     - app_build.go buildAllSources 门控
+  added:                           # hongguo-next 新写（非上游，M1 补齐）
+    - core/app_storage_windows.go   # 上游只有 !windows 一份，内核无法编到 Windows；补齐 GetDiskFreeSpaceEx
+    - core/proxy_system_windows.go  # 同上；补齐 WinINET 每用户代理设置读取
+  verified:                        # 2026-10-15 M1 实测
+    - "build+vet: linux/{amd64,arm64} windows/{amd64,arm64} darwin/{amd64,arm64} 全绿"
+    - "go test -race: 99 个测试函数 / 98 通过 / 1 跳过（仅 live 网络探活，opt-in）/ 0 失败"
+    - "bridge cgo 构建导出 2 个符号：DuanjuRequest / DuanjuFree"
+    - "环境注记：需 ffmpeg 在 PATH 才能跑加密 HLS 解码两测；johnvansickle 静态 7.0.2 的 HLS demuxer 在本容器段错误，改用 BtbN gpl 构建后通过"
   last_triaged: 2026-10-15
   backports: []                    # [{sha: <upstream-sha>, why: 站源失效修复, at: <date>}]
 
