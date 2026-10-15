@@ -118,6 +118,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 释放 runner 磁盘空间。CI 第五跑实测：Android SDK + NDK r28c（约 3GB）+
+      # Gradle 缓存 + Java/Go/Node 工具链把 14GB 吃满，Dart 编译写 app.dill 时
+      # 报 "No space left on device, errno = 28"。
+      # 清掉本构建用不到的大目录；保留 Android SDK（只删用不到的旧 NDK）。
+      - name: 释放 runner 磁盘空间
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk/* \
+            /usr/lib/jvm/temurin-8-jdk-amd64 2>/dev/null || true
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h / | tail -1
+
       # 工具链：Java（Gradle 9 / AGP 9.1 需要）+ NDK r28c（钉死，与 vendored
       # build.gradle.kts 的 ndkVersion 一致）。
       # 不用 android-actions/setup-android@v3：CI 首跑实测它在 sdkmanager 安装
