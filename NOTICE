@@ -2,8 +2,12 @@ NOTICE —— 来源链路、上游署名与许可说明
 =========================================
 
 本仓（hongguo-next / 红果 Next）是基于本版权人自己名下三个历史项目
-**整合并继续开发**的派生版本，整体以 **GNU General Public License v3.0**
-发布。依照 GPLv3 第 5(a) 条，特此声明来源链路、修改内容与许可状态。
+（一个自有仓 + 两个本方 fork）**整合并继续开发**的派生版本，整体以
+**GNU General Public License v3.0** 发布。依照 GPLv3 第 5(a) 条，特此
+声明来源链路、修改内容与许可状态。
+
+⚠ 其中两个来源是**第三方项目的 fork**，而**那两个第三方上游仍在活跃
+开发**，本仓对其负有持续跟踪义务（第三节、`docs/ARCHITECTURE.md` §1.3）。
 
 本文件是机器可核查的合规声明。任何一条来源都可以在下文给出的仓库与
 提交处直接核对。
@@ -15,24 +19,49 @@ NOTICE —— 来源链路、上游署名与许可说明
 仓库   : https://github.com/dawei233/hongguo-next
 许可   : GNU General Public License v3.0（全文见本目录 `LICENSE`）
 性质   : 修改版本（modified version），非上游原样分发
-说明   : 本仓为全新仓库，不是任何老仓的 fork；它**并入**了版权人本人名下
-         三个老仓的实现，并在本仓统一维护。三个老仓已停止开发。
+说明   : 本仓为全新仓库，不是任何来源仓的 fork；它**并入**了本版权人
+         名下的三个历史项目（一个自有仓 + 两个本方 fork）的实现，并在
+         本仓统一维护。
+         ⚠ 来源分三层，请勿混为一谈：
+           · 自有层 dawei233/hongguo-monorepo —— **已停止开发**（唯一
+             真正停止开发的一个）；
+           · 本方 fork 层 dawei233/guoapp-android、dawei233/hongguo-drama
+             —— 由本版权人**停止维护**；
+           · 上游层 zhoufuweigg/guoapp、jackotom/hongguo-drama ——
+             **第三方仓库，且仍在活跃开发**（见第三节与第四节）。
+         因此本仓对上游负有**持续跟踪义务**，详见
+         `docs/ARCHITECTURE.md` §1.3「上游跟踪义务」。
 
 
 二、为什么全仓采用 GPL-3.0
 --------------------------
 本仓的 GPL-3.0 不是新引入的约束，而是与产品线**既有的分发现实**一致：
 
-1. `hongguo-drama` 的 Windows / macOS 发行物已内置从固定源码构建的
-   **FFmpeg 9.0.2** 与 **x264 b35605ace3ddf7c1a5d67a2eb553f034aef41d55**。
+1. 本方 fork `dawei233/hongguo-drama` 的 Windows / macOS 发行物已内置从
+   固定源码构建的 **FFmpeg 9.0.2** 与
+   **x264 b35605ace3ddf7c1a5d67a2eb553f034aef41d55**。
    x264 是唯一外部编解码静态库（GPLv2-or-later），整体构建为
    **GPLv3-or-later**；因含 x264，无法走 LGPL 路线。
    → **既有分发物本来就是 GPLv3 二进制。**
-2. `hongguo-drama` 仓库本身即 `license: GPL-3.0`（见其 `package.json`
-   的 `"license": "GPL-3.0"` 与根目录 `LICENSE`）。
-3. `hongguo-monorepo` 与 `guoapp-android` 是**本版权人本人名下**、
-   `license=NONE`、`fork=false` 的自有仓库，版权人有权将其以 GPL-3.0
-   重新授权并并入本仓。
+2. 上述 fork 及其上游 `jackotom/hongguo-drama` 本身即 `license: GPL-3.0`
+   （见其 `package.json` 的 `"license": "GPL-3.0"` 与根目录 `LICENSE`）；
+   上游为第三方仓且**仍在活跃开发**，同为 GPL-3.0，与本仓同许可。
+3. `hongguo-monorepo` 是**本版权人本人名下**、`license=NONE`、`fork=false`
+   的自有仓库，版权人有权将其以 GPL-3.0 重新授权并并入本仓。
+4. `guoapp-android` 与 `hongguo-drama` 是**本版权人名下的 fork**（分别 fork
+   自 `zhoufuweigg/guoapp` 与 `jackotom/hongguo-drama`）。就此二者：
+   · 版权人授权的是**本人在该 fork 中新增/修改的部分**（`guoapp-android`
+     含本方 57 个提交）；
+   · `guoapp-android` 的 fork 基线来自**未声明许可证**的
+     `zhoufuweigg/guoapp`，该部分**仍是无许可的第三方代码**，本仓对其
+     **不作任何许可主张**，仅如实记录来源（见第三节来源 B）；
+   · `hongguo-drama` 的 fork 基线来自同为 GPL-3.0 的
+     `jackotom/hongguo-drama`，两端同许可，搬运与再分发即合规。
+5. ⚠ **两个上游仓库仍在活跃开发**（`zhoufuweigg/guoapp` 最后推送
+   2026-09-26；`jackotom/hongguo-drama` 最后推送 2026-10-15），本方的两个
+   fork 已停更，因此本仓的 vendored 快照会**持续落后于上游**。本仓不采用
+   merge/rebase 上游的同步方式，仅按 `docs/ARCHITECTURE.md` §1.3 做定向
+   回移，并在 `legacy/SOURCES.md` 记录上游 URL 与两侧 commit SHA。
 
 因此把本仓源码统一为 GPL-3.0 **不新增任何分发义务**，只是让源码侧许可
 与既有的二进制分发现实对齐。
@@ -41,26 +70,36 @@ NOTICE —— 来源链路、上游署名与许可说明
 三、来源链路与上游署名
 ----------------------
 
-### 来源 A —— hongguo-monorepo（PC 端实测能力来源）
+### 来源 A —— hongguo-monorepo（PC 端实测能力来源）· 层：自有
 
-    本版权人自有仓
+    本站（本版权人自有仓，非 fork）
       仓库   : https://github.com/dawei233/hongguo-monorepo
       参考提交: cfb1701
       许可   : 未附 LICENSE 文件（license=NONE），fork=false
+      状态   : **已停止开发**（最后推送 2026-10-11）—— 涉及的五个仓库中
+               唯一真正停止开发的一个，仅作历史存档
       授权   : 版权人本人所有，已授权以 GPL-3.0 并入本仓
 
-### 来源 B —— guoapp-android（Android 端与 Go 内核来源）
+    ▸ 无第三方上游：该仓非 fork，不存在需要跟踪的上游。
 
-    本站（本版权人自有仓）
+### 来源 B —— guoapp-android（Android 端与 Go 内核来源）· 层：本方 fork
+
+    本站（本版权人 fork，**已停止由本方维护**）
       仓库   : https://github.com/dawei233/guoapp-android
-      参考分支: android/main
-      许可   : 未附 LICENSE 文件（license=NONE），fork=false
-      授权   : 版权人本人所有，已授权以 GPL-3.0 并入本仓
+      参考分支: android/main（搬入时 HEAD = `ff3bad2`）
+      许可   : 未附 LICENSE 文件（license=NONE）
+      性质   : **fork**，fork 自上游① `zhoufuweigg/guoapp`；本方在 fork
+               另加了 57 个自己的提交
+      授权   : 本版权人授权**本人在该 fork 中新增/修改的部分**以 GPL-3.0
+               并入本仓；源自上游①的部分见下方"如实声明"
       溯源   : 由本版权人早期多端仓库 dawei233/guoapp 拆分而来
 
-    上游①（直接上游，请务必注意其许可状态）
+    上游①（直接上游，**仍是活跃项目，且未声明许可**）
       名称   : guoapp（红果鉴 / 真果鉴）
       仓库   : https://github.com/zhoufuweigg/guoapp
+      参考提交: 上游 `main` = `0e60928`（已被本方 fork 完全包含）
+      状态   : 🟢 **仍在开发** —— 最后推送 2026-09-26，916 star，
+               10 个 open issue，未归档
       许可   : **未声明许可证**（仓库未附 LICENSE 文件）
 
     上游②（原始来源，据上游①自述）
@@ -69,18 +108,31 @@ NOTICE —— 来源链路、上游署名与许可说明
       说明   : 上游① 本身即为该源码的打包分发，未提供原始仓库或
                许可证信息。本站无法进一步核实其仓库地址与许可状态。
 
-    ▸ 如实声明：上游①与上游②**均未声明许可证**。本仓不对其许可状态
-      作任何虚假声明。本仓所含相关代码来自本版权人自有的
-      `guoapp-android`，并由版权人以 GPL-3.0 授权；若上述任何一环的
+    ▸ 跟踪义务：上游① 活跃而本方 fork 已停更，vendored 快照会持续落后。
+      本来源的上游 URL 与两侧 commit SHA 记入 `legacy/SOURCES.md`，按
+      `docs/ARCHITECTURE.md` §1.3 定期评估并按需定向回移。
+
+    ▸ 如实声明：上游①与上游②**均未声明许可证，且上游①仍在活跃开发**。
+      本仓不对其许可状态作任何虚假声明。本仓所含相关代码来自本版权人
+      名下的 `guoapp-android`，其中由本版权人新增/修改的部分由版权人以
+      GPL-3.0 授权；**源自上游①的部分不适用该项授权**。若上述任何一环的
       作者或权利人认为本仓的存在不妥，请通过本仓 Issue 联系，我们将
       立即配合处理（包括移除相关代码或下架仓库）。
 
-### 来源 C —— hongguo-drama（PC 端 UI / 弹幕 / 站源来源）
+### 来源 C —— hongguo-drama（PC 端 UI / 弹幕 / 站源来源）· 层：本方 fork
 
-    本站（本版权人维护）
+    本站（本版权人 fork，**已停止由本方维护**）
       仓库   : https://github.com/dawei233/hongguo-drama
-      参考提交: c884fab
+      参考提交: c884fab（`main` HEAD）
+      性质   : **fork**，fork 自上游 `jackotom/hongguo-drama`
       许可   : **GNU General Public License v3.0**（原生，与本仓同许可）
+
+    上游（直接上游，**仍是活跃项目，同为 GPL-3.0**）
+      仓库   : https://github.com/jackotom/hongguo-drama
+      参考提交: 上游 `main` = `5a12c88`（是本方 fork `c884fab` 的祖先）
+      状态   : 🟢 **仍在开发** —— 最后推送 2026-10-15，233 star，
+               19 个 open issue，未归档
+      许可   : **GPL-3.0**
 
     上游链（自近及远）
       · jackotom/hongguo-drama
@@ -88,6 +140,11 @@ NOTICE —— 来源链路、上游署名与许可说明
       · zhenyong97/hongguo-downloader
         （hongguo-downloader 的修改版本，GPL-3.0）
       · 327044572/hongguo-downloader（红果短剧全集批量下载器，GPL-3.0）
+
+    ▸ 跟踪义务：上游 `jackotom/hongguo-drama` 是**三条上游里最活跃的一条**
+      （最后推送 2026-10-15），站源与接口修复会先到上游。本来源的上游 URL
+      与两侧 commit SHA 记入 `legacy/SOURCES.md`，按
+      `docs/ARCHITECTURE.md` §1.3 定期评估并按需定向回移。
 
     ▸ 本仓依 GPLv3 第 5(a) 条声明：本仓是基于上述项目的**修改版本**。
       相对于上游，本版权人对 hongguo-drama 所做的主要修改（自 2026 年
@@ -101,11 +158,14 @@ NOTICE —— 来源链路、上游署名与许可说明
 
 四、本仓并入的文件清单
 ----------------------
-以下文件来自上述三个老仓，已并入本仓并在本仓统一维护。此清单用于履行
-GPL-3.0 的来源可追溯与署名义务；本仓**不再**以构建期外部检出（checkout）
-或 git submodule 的方式引用老仓。
+以下文件来自上述三个来源（自有层 A、本方 fork 层 B/C），已并入本仓并在
+本仓统一维护。此清单用于履行 GPL-3.0 的来源可追溯与署名义务；本仓**不再**
+以构建期外部检出（checkout）或 git submodule 的方式引用任何来源仓。
 
-### 来自 A（hongguo-monorepo，Python → Go 移植）
+每个来源的上游跟踪字段（上游仓库 URL + 上游 commit SHA + 本方 fork 的
+SHA）记入 `legacy/SOURCES.md`；跟踪策略见 `docs/ARCHITECTURE.md` §1.3。
+
+### 来自 A（hongguo-monorepo · 自有层，Python → Go 移植）
 
     nas-backend/mp4_sanitize.py              (300 行)
       → core/media/sanitize.go, core/media/boxes.go
@@ -116,7 +176,7 @@ GPL-3.0 的来源可追溯与署名义务；本仓**不再**以构建期外部�
         `ffmpeg -decryption_key K -i URL -c copy` 解密链路与参数、以及
         "faststart remux 后必须二次净化"的实测结论。
 
-### 来自 B（guoapp-android，Go 原样并入）
+### 来自 B（guoapp-android · 本方 fork 层，Go 原样并入；上游 zhoufuweigg/guoapp 活跃、未声明许可）
 
     native/core/**                   (121 个文件，约 24035 行)
       → core/
@@ -134,7 +194,7 @@ GPL-3.0 的来源可追溯与署名义务；本仓**不再**以构建期外部�
       2. **删除** native/core/app_build.go 及其引用处的 buildAllSources
          编译期门控（含 -ldflags -X 注入），使 13 个站源默认全量开放。
 
-### 来自 C（hongguo-drama，GPL-3.0，原样/移植）
+### 来自 C（hongguo-drama · 本方 fork 层，GPL-3.0，原样/移植；上游 jackotom/hongguo-drama 活跃、同为 GPL-3.0）
 
     src/native/xifan.js              (135 行)
       → core/source/providers/xifan/（JS → Go 移植）
