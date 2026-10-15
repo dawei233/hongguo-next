@@ -11,6 +11,7 @@ import 'local_store.dart';
 import 'local_media_screen.dart';
 import 'models.dart';
 import 'player_screen.dart';
+import 'remote_widgets.dart';
 import 'settings_screen.dart';
 import 'widgets.dart';
 
@@ -422,12 +423,17 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     ),
   ];
 
-  Widget _collection(DownloadCollection collection) {
+  Widget _collection(DownloadCollection collection, bool television) {
     final count = collection.jobs
         .where((job) => _selected.contains(job.id))
         .length;
     final expanded = _expanded.contains(collection.drama.id);
-    return Card(
+    void toggle() => setState(() {
+      if (!_expanded.remove(collection.drama.id)) {
+        _expanded.add(collection.drama.id);
+      }
+    });
+    final card = Card(
       child: ListTile(
         leading: _selecting
             ? Checkbox(
@@ -450,11 +456,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           '${collection.completed}/${collection.jobs.length} 集已下载 · ${storageSize(collection.bytes)}'
           '${collection.active > 0 ? ' · ${collection.active} 项进行中' : ''}${collection.failed > 0 ? ' · ${collection.failed} 项失败' : ''}',
         ),
-        onTap: () => setState(() {
-          if (!_expanded.remove(collection.drama.id)) {
-            _expanded.add(collection.drama.id);
-          }
-        }),
+        onTap: toggle,
         trailing: PopupMenuButton<String>(
           tooltip: '${collection.drama.title} · 合集操作',
           enabled: !_busy,
@@ -484,11 +486,69 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         ),
       ),
     );
+    if (!television) return card;
+    // TV：合集标题本身要能拿到焦点并用「确认」键展开/收起，否则遥控器
+    // 无法进入分集列表。
+    return RemoteTarget(
+      label: collection.drama.title,
+      selected: expanded,
+      autofocus: false,
+      onPressed: toggle,
+      child: card,
+    );
   }
 
-  Widget _episode(DownloadJob job) => Padding(
-    padding: const EdgeInsets.only(left: 12),
-    child: Card(
+  /// 分集可执行的操作（命令, 文案），弹出的下拉菜单和 TV 操作面板共用，
+  /// 避免两条路径的文案漂移。顺序即遥控器「上下」键的遍历顺序，
+  /// 第一个是默认焦点。
+  List<(String, String)> _episodeActions(DownloadJob job) => [
+    if (job.completed) ('play', '本地播放'),
+    if (job.active) ('pause', '暂停'),
+    if (job.resumable) ('resume', '继续 / 重试'),
+    if (job.completed)
+      (
+        job.archived ? 'restore' : 'archive',
+        job.archived ? '恢复任务' : '清理任务，保留视频',
+      ),
+    ('remove', job.completed ? '删除视频' : '取消下载'),
+  ];
+
+  Future<void> _episodeSheet(DownloadJob job) async {
+    final actions = _episodeActions(job);
+    if (actions.isEmpty) return;
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${job.drama.title} · 第 ${job.episode.number} 集'),
+        content: Text(
+          '${job.archived ? '已保留视频' : job.stateLabel} · ${storageSize(job.bytes)}'
+          '${job.actualQuality > 0 ? ' · ${job.actualQuality}P' : ''}',
+        ),
+        actions: [
+          for (final (index, action) in actions.indexed)
+            TextButton(
+              autofocus: index == 0,
+              onPressed: () => Navigator.pop(context, action.$1),
+              child: Text(action.$2),
+            ),
+        ],
+      ),
+    );
+    if (value == null || !mounted) return;
+    _runEpisodeAction(job, value);
+  }
+
+  void _runEpisodeAction(DownloadJob job, String value) {
+    if (value == 'play') {
+      _play(job);
+    } else {
+      _batch(value, [job]);
+    }
+  }
+
+  Widget _episode(DownloadJob job, bool television) {
+    final actions = _episodeActions(job);
+    final card = Card(
       key: ValueKey('download-task-${job.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -521,36 +581,18 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                 ? () => _play(job)
                 : null,
             trailing: _selecting
+                // TV：下拉菜单不可用，改由整行的操作面板承载，所以这里不再
+                // 渲染第二个可聚焦控件，保证「上下」键一格就是下一集。
+                ? null
+                : television
                 ? null
                 : PopupMenuButton<String>(
                     enabled: !_busy,
                     tooltip: '分集操作',
-                    onSelected: (value) {
-                      if (value == 'play') {
-                        _play(job);
-                      } else {
-                        _batch(value, [job]);
-                      }
-                    },
+                    onSelected: (value) => _runEpisodeAction(job, value),
                     itemBuilder: (_) => [
-                      if (job.completed)
-                        const PopupMenuItem(value: 'play', child: Text('本地播放')),
-                      if (job.active)
-                        const PopupMenuItem(value: 'pause', child: Text('暂停')),
-                      if (job.resumable)
-                        const PopupMenuItem(
-                          value: 'resume',
-                          child: Text('继续 / 重试'),
-                        ),
-                      if (job.completed)
-                        PopupMenuItem(
-                          value: job.archived ? 'restore' : 'archive',
-                          child: Text(job.archived ? '恢复任务' : '清理任务，保留视频'),
-                        ),
-                      PopupMenuItem(
-                        value: 'remove',
-                        child: Text(job.completed ? '删除视频' : '取消下载'),
-                      ),
+                      for (final action in actions)
+                        PopupMenuItem(value: action.$1, child: Text(action.$2)),
                     ],
                   ),
           ),
@@ -561,8 +603,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
             ),
         ],
       ),
-    ),
-  );
+    );
+    final row = Padding(padding: const EdgeInsets.only(left: 12), child: card);
+    if (!television) return row;
+    return RemoteTarget(
+      label: '${job.drama.title} · 第 ${job.episode.number} 集',
+      onPressed: _busy ? null : () => _episodeSheet(job),
+      child: row,
+    );
+  }
 
   Widget _batchBar() => Material(
     color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -617,6 +666,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       return const StatusPanel(title: '当前用户无权访问下载', message: '请返回后重新操作。');
     }
     final collections = _collections;
+    // 列表项是懒构建的，不能在 itemBuilder 里查 InheritedWidget。
+    final television = AppLayout.isTelevision(context);
     final rows = <Object>[
       for (final collection in collections) ...[
         collection,
@@ -713,8 +764,11 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                   padding: const EdgeInsets.fromLTRB(12, 4, 12, 20),
                   itemCount: rows.length,
                   itemBuilder: (_, index) => switch (rows[index]) {
-                    DownloadCollection collection => _collection(collection),
-                    DownloadJob job => _episode(job),
+                    DownloadCollection collection => _collection(
+                      collection,
+                      television,
+                    ),
+                    DownloadJob job => _episode(job, television),
                     _ => const SizedBox.shrink(),
                   },
                 ),

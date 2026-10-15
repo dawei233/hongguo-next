@@ -211,7 +211,20 @@ class _CachedCoverImageState extends State<CachedCoverImage> {
       widget.drama.id,
     );
     widget.repository.catalogUpdates.addListener(_metadataChanged);
-    _file = widget.repository.cover(widget.drama);
+    _file = _trackCover(widget.repository.cover(widget.drama));
+  }
+
+  /// 给封面 future 挂一个 no-op 错误处理。
+  ///
+  /// 为什么必须：`build` 里的 FutureBuilder 虽然处理 `snapshot.hasError`，但
+  /// 若该 future 被换掉（didUpdateWidget/_retry）或 widget 已 dispose，
+  /// FutureBuilder 不再订阅，rejection 就**无人接**，漏到 zone 里变成
+  /// "The following AppFailure was thrown running a test (but after the test
+  /// had completed)" —— 测试框架把它当未捕获异常。`Future.ignore()` 把错误
+  /// 标记为已处理，FutureBuilder 照常拿到错误，dispose 后也不再漏。
+  Future<String> _trackCover(Future<String> future) {
+    future.ignore();
+    return future;
   }
 
   @override
@@ -230,7 +243,7 @@ class _CachedCoverImageState extends State<CachedCoverImage> {
       _coverRevision = widget.repository.catalogUpdates.coverRevision(
         widget.drama.id,
       );
-      _file = widget.repository.cover(widget.drama);
+      _file = _trackCover(widget.repository.cover(widget.drama));
     }
   }
 
@@ -274,10 +287,10 @@ class _CachedCoverImageState extends State<CachedCoverImage> {
       setState(() {
         _coverFailed = _retryOnFailure = false;
         _failedPath = null;
-        _file = widget.repository.cover(
+        _file = _trackCover(widget.repository.cover(
           widget.repository.catalogUpdates.current(widget.drama),
           force: true,
-        );
+        ));
       });
     }
   }
