@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hongguo-next.dev/contracts/danmaku.schema.json",
+  "title": "hongguo-next 弹幕线格式契约（ARCHITECTURE.md §4.1 Danmaku / §5.2 管线）",
+  "$comment": "本仓新增（M1 契约层）。纯契约、无实现。对 §4.1 的 Danmaku / DanmakuTrack 给出线格式，并补出分片抓取请求与响应（对应 §5.2 的「按 start/dur 分片抓取 → 合并去重」）。字段与 core/source/model.go 的 Go 模型逐字段对应。",
+  "description": "弹幕线格式总览：一条消息要么是分片抓取请求（chunkRequest），要么是分片响应（chunkResponse）。核内归一后的形态是 danmakuTrack（§4.1），即响应各分片按 (timeMs, text) 合并去重后的结果。",
+  "unevaluatedProperties": false,
+  "oneOf": [
+    {
+      "$ref": "#/$defs/chunkRequest"
+    },
+    {
+      "$ref": "#/$defs/chunkResponse"
+    }
+  ],
+  "$defs": {
+    "danmakuItem": {
+      "type": "object",
+      "required": ["timeMs", "text", "color", "mode", "weight"],
+      "additionalProperties": false,
+      "description": "单条弹幕（§4.1 Danmaku）。不含上游 comment_id：上游会给同一句话分配不同 id，去重必须按 (timeMs, text) 判定，暴露 id 只会诱导错误实现。",
+      "properties": {
+        "timeMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "相对本集起点的偏移。单位：毫秒。不可空；无时间轴的降级评论固定为 0。"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 181,
+          "description": "弹幕文本，不可空串（空文本在解析阶段即被丢弃）。实现将超长文本截断为 180 个字符并补「…」，故线上上限为 181 个字符。控制字符与 U+2028/U+2029 在解析阶段被替换为空格。"
+        },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$",
+          "default": "#FFFFFF",
+          "description": "颜色，形如 \"#RRGGBBAA\" 或 \"#RRGGBB\"。不可空；缺省（源未给颜色）为 \"#FFFFFF\"（不透明白）。"
+        },
+        "mode": {
+          "type": "integer",
+          "enum": [1, 2, 3],
+          "description": "弹幕模式。1=滚动（默认），2=顶部固定，3=底部固定。不可空、无 0 值；源未给模式时取 1。"
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "权重，用于轨道布局时的优先级/密度控制（§5.2 layout.go）。无单位；0=未指定，等价于最低权重。不可空。"
+        }
+      }
+    },
+    "danmakuTrack": {
+      "type": "object",
+      "required": ["videoId", "items"],
+      "additionalProperties": false,
+      "description": "核内归一后的弹幕轨（§4.1 DanmakuTrack）。与 UI 无关。",
+      "properties": {
+        "videoId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "源内视频 ID（不透明字符串，段内不含分隔语义）。不可空。"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/danmakuItem"
+          },
+          "description": "弹幕条目，按 timeMs 升序、已按 (timeMs, text) 去重。不可为 null；空数组表示该区间确无弹幕（而非抓取失败——抓取失败必须走错误信封，不得用空数组冒充成功）。"
+        }
+      }
+    },
+    "chunkRequest": {
+      "type": "object",
+      "required": ["episodeId", "startS", "durS"],
+      "description": "分片抓取请求（§4.1 Source.Danmaku 的 startS/durS 入参）。仅当源声明 CapDanmaku 时发出。本定义刻意不设 additionalProperties:false —— 它会被 bridge-api 的 danmakuRequest 用 allOf 组合以补 intent 字段，而 additionalProperties:false 会把组合进来的字段判成非法；严格性由 danmaku 根 schema 与 bridge-api.danmakuRequest 的 unevaluatedProperties:false 承担。",
+      "properties": {
+        "episodeId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "集 ID，与 Episode.episodeId 同源同形（\"<sourceId>:<seriesKey>:<chapterKey>\"）。不可空。"
+        },
+        "startS": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "分片区间起点。单位：秒（含）。不可空。"
+        },
+        "durS": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "分片区间终点。单位：秒（不含）。注意：这是既有的 core 语义——core 的字段名叫 durationMs，但实测语义是「结束偏移」而非「时长」（core 里判据为 duration > start），本契约按实测语义定义；若 M3 修正 core 命名，本字段同步改名。必须满足 durS > startS。"
+        }
+      }
+    },
+    "chunkResponse": {
+      "type": "object",
+      "required": ["episodeId", "videoId", "startMs", "nextMs", "total", "timeline", "items"],
+      "additionalProperties": false,
+      "description": "分片响应。客户端按 nextMs 续拉，直到 nextMs 不再前进或达到本集时长。",
+      "properties": {
+        "episodeId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "回显请求的集 ID。不可空。"
+        },
+        "videoId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "该集对应的源内视频 ID（与 danmakuTrack.videoId 同值）。不可空。"
+        },
+        "startMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "本分片区间起点。单位：毫秒（含）。不可空。"
+        },
+        "nextMs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "下一分片起点。单位：毫秒（不含）；由上游游标与本分片终点取小值得到，故单调不减且不超过请求区间终点。不可空；等于 startMs 表示无更多（停止续拉）。"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "该集弹幕总数（上游游标给出）。单位：条。0=上游未提供，属未知而非确为零。不可空。"
+        },
+        "timeline": {
+          "type": "boolean",
+          "description": "true=本分片是带时间轴的真弹幕（CapDanmaku）；false=无签名公开评论降级源（CapWebCommentFallback），此时每条 timeMs 固定为 0，UI 必须标注「非时间轴评论」。不可空。"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 1000,
+          "items": {
+            "$ref": "#/$defs/danmakuItem"
+          },
+          "description": "本分片的弹幕条目，按 timeMs 升序、区间内去重。不可为 null。core 的分页实现单分片最多 90 条，契约上限放宽到 1000 以免把实现细节写成硬约束。"
+        }
+      }
+    }
+  }
+}

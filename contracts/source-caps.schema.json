@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hongguo-next.dev/contracts/source-caps.schema.json",
+  "title": "hongguo-next 站源能力位契约（ARCHITECTURE.md §4.2）",
+  "$comment": "本仓新增（M1 契约层）。纯契约、无实现。本文件是能力位枚举与站源 ID 枚举的唯一权威定义；bridge-api.schema.json 用相对 $ref 引用本文件的 $defs。Go 侧对应 core/source/caps.go 的 Caps 位域与 core/source/source.go 的 ID 常量。位序号从 0 起，与 Go 常量声明顺序 CapSearch<<0 … CapWebCommentFallback<<10 一致。",
+  "type": "object",
+  "required": ["sourceId", "caps"],
+  "additionalProperties": false,
+  "properties": {
+    "sourceId": {
+      "$ref": "#/$defs/sourceId",
+      "description": "声明能力位的站源 ID。"
+    },
+    "name": {
+      "type": "string",
+      "description": "站源展示名。单位：无。可空串（空串表示由调用方自行决定展示文案，不表示未知）。"
+    },
+    "caps": {
+      "$ref": "#/$defs/caps",
+      "description": "该站源声明支持的能力位集合。"
+    },
+    "catalog": {
+      "$ref": "#/$defs/capabilityCatalog",
+      "description": "§4.2 位定义表的机器可读形态（可选；缺省时以本文件 $defs.capabilityCatalog 的 default 为准）。"
+    }
+  },
+  "$defs": {
+    "sourceId": {
+      "type": "string",
+      "enum": [
+        "hongguo",
+        "huangguo",
+        "guipian",
+        "hanxiaoquan",
+        "huangdou",
+        "huangju",
+        "yeguo",
+        "dsd",
+        "cloudfront",
+        "sorani",
+        "legacy",
+        "xifan",
+        "hema"
+      ],
+      "description": "§4.3 去重后的 13 个站源 ID（对外唯一 ID，非空、不可空）。huangguo 的 ai / video 两个 facet 在契约层合并为本 ID；legacy 是「旧接口自动发现」的 fallback 机制而非真站源。"
+    },
+    "capBit": {
+      "type": "string",
+      "enum": [
+        "search",
+        "category",
+        "rank",
+        "recommend",
+        "multiQuality",
+        "directPlay",
+        "encryptedPlay",
+        "mp4Sanitize",
+        "hls",
+        "danmaku",
+        "webCommentFallback"
+      ],
+      "description": "单个能力位的线上名称（字符串）。与 core/source/caps.go 的 Go 常量一一对应，位序号见 $defs/capabilityCatalog.default。未知名称必须被拒绝，不得静默忽略。"
+    },
+    "caps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capBit"
+      },
+      "uniqueItems": true,
+      "description": "能力位集合。顺序无关（规范序为 capabilityCatalog.default 的位序）；去重；空数组表示未声明任何能力（不等于「不支持任何能力」的否定断言，而是「未声明」）。",
+      "default": []
+    },
+    "bitDescriptor": {
+      "type": "object",
+      "required": ["bit", "name", "meaning"],
+      "additionalProperties": false,
+      "properties": {
+        "bit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "位序号（0 起），对应 Go 位域 Caps 的第 bit 位。"
+        },
+        "name": {
+          "$ref": "#/$defs/capBit",
+          "description": "该位的线上名称。"
+        },
+        "meaning": {
+          "type": "string",
+          "description": "该位的语义（取自 §4.2 表格；不含单位）。"
+        }
+      }
+    },
+    "capabilityCatalog": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/bitDescriptor"
+      },
+      "minItems": 11,
+      "maxItems": 11,
+      "description": "§4.2 全部 11 个能力位的定义表，按位序号升序。",
+      "default": [
+        {
+          "bit": 0,
+          "name": "search",
+          "meaning": "支持关键字搜索"
+        },
+        {
+          "bit": 1,
+          "name": "category",
+          "meaning": "支持分类浏览"
+        },
+        {
+          "bit": 2,
+          "name": "rank",
+          "meaning": "支持榜单"
+        },
+        {
+          "bit": 3,
+          "name": "recommend",
+          "meaning": "支持推荐流"
+        },
+        {
+          "bit": 4,
+          "name": "multiQuality",
+          "meaning": "支持多清晰度选择"
+        },
+        {
+          "bit": 5,
+          "name": "directPlay",
+          "meaning": "返回可直接播放的直链（无需 ffmpeg）"
+        },
+        {
+          "bit": 6,
+          "name": "encryptedPlay",
+          "meaning": "需要 core/media 以 -decryption_key 解密"
+        },
+        {
+          "bit": 7,
+          "name": "mp4Sanitize",
+          "meaning": "解密产物需 core/media/sanitize 二次净化"
+        },
+        {
+          "bit": 8,
+          "name": "hls",
+          "meaning": "返回 m3u8 而非 mp4"
+        },
+        {
+          "bit": 9,
+          "name": "danmaku",
+          "meaning": "提供真弹幕（带时间轴）"
+        },
+        {
+          "bit": 10,
+          "name": "webCommentFallback",
+          "meaning": "可提供无签名评论作为降级弹幕（无时间轴）"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,561 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hongguo-next.dev/contracts/bridge-api.schema.json",
+  "title": "hongguo-next bridge API 契约（ARCHITECTURE.md §4.1 站源统一模型）",
+  "$comment": "本仓新增（M1 契约层）。纯契约、无实现。覆盖 §4.1 的 Series / Episode / Stream / Page / Danmaku / DanmakuTrack / Caps / Query，以及 8 个站源层意图与 {ok,error,code} 响应信封。Caps 的能力位枚举引用 source-caps.schema.json（权威定义），弹幕条目引用 danmaku.schema.json（权威定义）。注意：bridge 的 2 个 C 符号（DuanjuRequest / DuanjuFree）ABI 已冻结，其 nativeInput.action 面（initialize / downloads / lan / catalog / …）不在本契约范围，本契约只固定站源层意图。",
+  "description": "线格式总览：一条消息要么是请求（request，含 intent 与意图参数），要么是响应（response：成功为 okEnvelope，失败为 errorEnvelope）。所有字段名与 core/source 的 Go 模型 JSON tag 逐字段一致。",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ],
+  "$defs": {
+    "intent": {
+      "type": "string",
+      "enum": [
+        "search",
+        "categories",
+        "rank",
+        "recommend",
+        "detail",
+        "episodes",
+        "resolve",
+        "danmaku"
+      ],
+      "description": "站源层意图，与 §4.1 Source 接口方法一一对应：search→Search，categories→Categories，rank→Rank，recommend→推荐流（源能力位 CapRecommend），detail→Detail，episodes→Episodes，resolve→Resolve，danmaku→Danmaku。不可空。"
+    },
+    "sourceId": {
+      "$ref": "source-caps.schema.json#/$defs/sourceId",
+      "description": "站源 ID（13 个之一，见 source-caps.schema.json）。"
+    },
+    "Caps": {
+      "$ref": "source-caps.schema.json#/$defs/caps",
+      "description": "站源能力位集合（§4.2）。线上为名称数组；Go 侧为 Caps 位域，序列化后与本形态一致。"
+    },
+    "Quality": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "2160p",
+        "1440p",
+        "1080p",
+        "720p",
+        "480p",
+        "360p"
+      ],
+      "description": "清晰度标签。\"auto\"=交由播放侧按可用清晰度自选（也是未知清晰度的归一值）。core 内部以像素高度（int）表达清晰度，适配层负责换算；非本枚举的原始值必须在适配层归一，不得直接上线。不可空。"
+    },
+    "Container": {
+      "type": "string",
+      "enum": ["mp4", "hls"],
+      "description": "封装形态。mp4=单文件（可能是加密 MP4），hls=m3u8 播放列表。不可空。"
+    },
+    "Series": {
+      "type": "object",
+      "required": ["id", "sourceId", "title", "cover", "year", "total", "tag", "score"],
+      "additionalProperties": false,
+      "description": "跨源统一的剧集模型（§4.1 Series）。",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:.+$",
+          "description": "全局剧 ID，形如 \"<sourceId>:<sourceKey>\"（例 \"hongguo:12345\"）。跨源别名链（§4.4：同一剧在不同源上的 ID 互为别名）以此为键。不可空。"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/sourceId",
+          "description": "提供该条数据的站源 ID。注意：这是源本身的 ID，不是源内剧 ID（源内剧 ID 是 id 中冒号后的部分）。不可空。"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "剧名。不可空串；适配层以 core 的 DisplayTitle 兜底，缺标题时为「短剧」，不返回空串。"
+        },
+        "cover": {
+          "type": "string",
+          "description": "封面 URL（绝对地址，必要时含 CDN 查询串）。单位：无。可空串：\"\" 表示源未给出封面，调用方自行占位；不得伪造。"
+        },
+        "year": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "首播年。单位：年（4 位）。0=未知（源未给出上线日期）。"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "总集数。单位：集。0=未知，不表示零集。"
+        },
+        "tag": {
+          "type": "string",
+          "description": "源原始分类/标签文案（未归一，供 UI 直显）。单位：无。可空串：\"\" 表示源未给出。"
+        },
+        "score": {
+          "type": "string",
+          "description": "源原始评分文案（保留原文，不解析成数值，避免把「9.2分」「暂无」混为一谈）。单位：无。可空串：\"\" 表示无评分。"
+        }
+      }
+    },
+    "Episode": {
+      "type": "object",
+      "required": ["seriesId", "episodeId", "index", "title", "durationS"],
+      "additionalProperties": false,
+      "description": "跨源统一的集模型（§4.1 Episode）。",
+      "properties": {
+        "seriesId": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:.+$",
+          "description": "所属剧的全局 ID，与 Series.id 同值。不可空。"
+        },
+        "episodeId": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:.*$",
+          "description": "源内不透明 ID，格式 \"<sourceId>:<...>\"（core 现状为 \"<sourceId>:<seriesKey>:<chapterKey>\"，如 \"hongguo:12345:7301\"；部分源的 seriesKey 为空、chapterKey 本身含冒号，故除首个冒号外不得再切分）。此值原样回传给 resolve/danmaku 意图。不可空。"
+        },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "集序号。单位：集（1 起始，与 core 的「第%d集」及 localPlan(dramaID, index) 约定一致）。0=未知。"
+        },
+        "title": {
+          "type": "string",
+          "description": "集标题（多为「第N集」，源给标题时用源标题）。单位：无。可空串：\"\" 表示源未给出。"
+        },
+        "durationS": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "时长。单位：秒。0=未知（core 的 Chapter 不携带时长，需媒体层解析后才有）。"
+        }
+      }
+    },
+    "Stream": {
+      "type": "object",
+      "required": [
+        "url",
+        "encrypted",
+        "headers",
+        "quality",
+        "container",
+        "needsSanitize",
+        "expiresAt"
+      ],
+      "additionalProperties": false,
+      "description": "「怎么播」的描述（§4.1 Stream）：只描述如何取流，不含任何源特有字段，也不返回文件路径（由 core/media 决定 ffmpeg / 直连 / 代理）。",
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^(https?|file)://",
+          "description": "取流地址（http/https，或本地播放时的 file://）。不可空、不得是 core 内部协议标记（如 \"hongguo-cenc://\"，那是待解析的中间态，不是可取流地址）。"
+        },
+        "encrypted": {
+          "type": "boolean",
+          "description": "是否需要以 decryptionKey 解密。不可空。"
+        },
+        "decryptionKey": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "AES-128 密钥的十六进制小写形态（16 字节 → 32 个十六进制字符，与 core 的 hex.EncodeToString(CENCKey/HLSKey) 一致）。可空性：省略当且仅当 encrypted=false；encrypted=true 时必须存在且非空。"
+        },
+        "headers": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "取流时必须附带的请求头（至少含 Referer，值为绝对 URL；键名按 HTTP 大小写规范）。可空：null 与 {} 均表示无需附加头（Go 的 nil map 序列化为 null）。"
+        },
+        "quality": {
+          "type": "string",
+          "pattern": "^(auto|[0-9]{3,4}p)$",
+          "description": "清晰度标签，取值同 Quality（\"1080p\" / \"720p\" / \"auto\"）。不可空；未知一律归一为 \"auto\"。"
+        },
+        "container": {
+          "$ref": "#/$defs/Container",
+          "description": "封装形态。不可空。"
+        },
+        "needsSanitize": {
+          "type": "boolean",
+          "description": "媒体层在 ffmpeg remux 后是否必须再做一次 MP4 净化（ADR-0004）。不可空；缺省语义为 false，但适配层必须显式给出，不得依赖缺省。"
+        },
+        "expiresAt": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "地址失效时刻，RFC3339（UTC，含 Z）。单位：绝对时刻。可空：null 表示无过期或未知；等价形态是 Go time.Time 零值的标准序列化结果 \"0001-01-01T00:00:00Z\"，两者含义相同，消费方必须同时接受。"
+        }
+      }
+    },
+    "Query": {
+      "type": "object",
+      "required": ["keyword", "page", "pageSize", "filters"],
+      "additionalProperties": false,
+      "description": "搜索入参（§4.1 Query）。",
+      "properties": {
+        "keyword": {
+          "type": "string",
+          "description": "关键字。单位：无。可空串：\"\" 表示不带关键字的浏览式列举（等价于分类/榜单浏览）。"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "页码。单位：页（1 起始）。不可空；调用方未指定时取 1。"
+        },
+        "pageSize": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "每页条数。单位：条。0=由站源决定（core 默认 30）。"
+        },
+        "filters": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "源特有的筛选条件（如分类 ID、地区、年代），键值均为字符串，由各源自定义语义。可空：null 与 {} 均表示无筛选。"
+        }
+      }
+    },
+    "Page": {
+      "type": "object",
+      "required": ["items", "total", "hasMore"],
+      "additionalProperties": false,
+      "description": "分页结果（§4.1 Page）。",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Series"
+          },
+          "description": "本页剧集。不可为 null；空数组表示本页确无结果。"
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "命中总数。单位：条。0=未知（多数站源不返回总数），不表示确为零。"
+        },
+        "hasMore": {
+          "type": "boolean",
+          "description": "是否还有下一页。不可空；站源未给时由适配层按「本页是否满页」推断，且必须与 items 长度自洽。"
+        }
+      }
+    },
+    "Category": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": false,
+      "description": "分类条目（§4.1 Categories 的返回元素）。",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "源内不透明分类 ID，用于回填 Query.filters。不可空。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "分类展示名。不可空。"
+        }
+      }
+    },
+    "Danmaku": {
+      "$ref": "danmaku.schema.json#/$defs/danmakuItem",
+      "description": "单条弹幕（§4.1 Danmaku）。权威定义见 danmaku.schema.json。"
+    },
+    "DanmakuTrack": {
+      "$ref": "danmaku.schema.json#/$defs/danmakuTrack",
+      "description": "核内归一后的弹幕轨（§4.1 DanmakuTrack）。权威定义见 danmaku.schema.json；分片抓取的请求/响应形态见同文件 chunkRequest/chunkResponse。"
+    },
+    "request": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/searchRequest"
+        },
+        {
+          "$ref": "#/$defs/categoriesRequest"
+        },
+        {
+          "$ref": "#/$defs/rankRequest"
+        },
+        {
+          "$ref": "#/$defs/recommendRequest"
+        },
+        {
+          "$ref": "#/$defs/detailRequest"
+        },
+        {
+          "$ref": "#/$defs/episodesRequest"
+        },
+        {
+          "$ref": "#/$defs/resolveRequest"
+        },
+        {
+          "$ref": "#/$defs/danmakuRequest"
+        }
+      ],
+      "description": "站源层请求：按 intent 判别。"
+    },
+    "searchRequest": {
+      "type": "object",
+      "required": ["intent", "query"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "search",
+          "description": "意图标识。"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/sourceId",
+          "description": "限定单源；省略=对全部支持搜索的源并发聚合（§4.4 AggregateSearch，12s 超时、归一去重、保留别名链）。"
+        },
+        "query": {
+          "$ref": "#/$defs/Query",
+          "description": "搜索入参。"
+        }
+      }
+    },
+    "categoriesRequest": {
+      "type": "object",
+      "required": ["intent"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "categories",
+          "description": "意图标识。"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/sourceId",
+          "description": "限定单源；省略=返回全部声明 CapCategory 的源的分类并集。"
+        }
+      }
+    },
+    "rankRequest": {
+      "type": "object",
+      "required": ["intent", "sourceId", "board"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "rank",
+          "description": "意图标识。"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/sourceId",
+          "description": "榜单所属源（榜单是源特有概念，必填）。"
+        },
+        "board": {
+          "type": "string",
+          "minLength": 1,
+          "description": "榜单标识，源内不透明（如 \"hot\" / \"newest\"）。不可空。"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "页码。单位：页（1 起始）；省略时取 1。"
+        }
+      }
+    },
+    "recommendRequest": {
+      "type": "object",
+      "required": ["intent", "sourceId"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "recommend",
+          "description": "意图标识。"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/sourceId",
+          "description": "推荐流所属源（必填；仅当该源声明 CapRecommend 时可用）。"
+        },
+        "genre": {
+          "type": "string",
+          "description": "推荐题材/频道键，源内不透明。可空串：缺省推荐流。"
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "页码。单位：页（1 起始）；省略时取 1。"
+        }
+      }
+    },
+    "detailRequest": {
+      "type": "object",
+      "required": ["intent", "seriesId"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "detail",
+          "description": "意图标识。"
+        },
+        "seriesId": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:.+$",
+          "description": "全局剧 ID（Series.id 原样回传）。不可空。"
+        }
+      }
+    },
+    "episodesRequest": {
+      "type": "object",
+      "required": ["intent", "seriesId"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "episodes",
+          "description": "意图标识。"
+        },
+        "seriesId": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:.+$",
+          "description": "全局剧 ID（Series.id 原样回传）。不可空。"
+        }
+      }
+    },
+    "resolveRequest": {
+      "type": "object",
+      "required": ["intent", "episodeId"],
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "const": "resolve",
+          "description": "意图标识。"
+        },
+        "episodeId": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+:.*$",
+          "description": "集 ID（Episode.episodeId 原样回传）。不可空。"
+        },
+        "quality": {
+          "$ref": "#/$defs/Quality",
+          "description": "期望清晰度；省略等价于 \"auto\"。源不支持多清晰度时按源可用的最高清晰度返回，并如实标注实际清晰度。"
+        }
+      }
+    },
+    "danmakuRequest": {
+      "$comment": "用 allOf 组合共享定义时，不能给被组合的子 schema 加 additionalProperties:false —— 那会把本层补上的 intent 判成非法字段。严格性因此用 unevaluatedProperties:false 在组合层收口（draft 2020-12 的专门机制）。",
+      "allOf": [
+        {
+          "$ref": "danmaku.schema.json#/$defs/chunkRequest"
+        }
+      ],
+      "type": "object",
+      "required": ["intent"],
+      "properties": {
+        "intent": {
+          "const": "danmaku",
+          "description": "意图标识。"
+        }
+      },
+      "unevaluatedProperties": false,
+      "description": "弹幕分片抓取请求（episodeId / startS / durS 的定义见 danmaku.schema.json 的 chunkRequest）。仅当源声明 CapDanmaku 时可用；CapWebCommentFallback 的降级评论走同一意图、由响应 timeline=false 标识。"
+    },
+    "response": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/okEnvelope"
+        },
+        {
+          "$ref": "#/$defs/errorEnvelope"
+        }
+      ],
+      "description": "响应信封（{ok,error,code}）：成功为 okEnvelope，失败为 errorEnvelope。"
+    },
+    "okEnvelope": {
+      "type": "object",
+      "required": ["ok", "data"],
+      "properties": {
+        "ok": {
+          "const": true,
+          "description": "成功标志。不可空。"
+        },
+        "data": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/Page"
+            },
+            {
+              "$ref": "#/$defs/Series"
+            },
+            {
+              "$ref": "#/$defs/episodesData"
+            },
+            {
+              "$ref": "#/$defs/Stream"
+            },
+            {
+              "$ref": "#/$defs/DanmakuTrack"
+            },
+            {
+              "$ref": "#/$defs/categoriesData"
+            }
+          ],
+          "description": "按意图取形态：search/rank/recommend→Page；detail→Series；episodes→episodesData；resolve→Stream；danmaku→DanmakuTrack；categories→categoriesData。null 表示该意图无业务载荷（core 现状：无返回值的操作会带 data:null）。"
+        }
+      },
+      "description": "成功信封。允许出现契约未列的扩展字段（向前兼容），但不得改列字段语义。"
+    },
+    "errorEnvelope": {
+      "type": "object",
+      "required": ["ok", "error"],
+      "properties": {
+        "ok": {
+          "const": false,
+          "description": "失败标志。不可空。"
+        },
+        "error": {
+          "type": "string",
+          "minLength": 1,
+          "description": "面向用户的错误文案（中文，已脱敏，见 core 的 publicError）。不可空；仅供展示，禁止作为机读判据——判据一律用 code。"
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "invalid_request",
+            "not_ready",
+            "source_unsupported",
+            "source_blocked",
+            "local_media",
+            "expired",
+            "upstream_error"
+          ],
+          "description": "稳定机读错误码。可空性：字段本身可省略（core 现状：多数错误不带 code），但一旦出现必须是本枚举值。语义：invalid_request=请求格式无效或意图不支持（core「请求格式无效」/「不支持的应用操作」）；not_ready=内核尚未初始化（core「应用核心尚未就绪」）；source_unsupported=未知或本仓尚未实现该源（适配层 ErrUnknownSource / ErrNotImplementedInCore）；source_blocked=源限流/退避中，须读 retryAt（core 的 requestBackoff）；local_media=本地文件缺失，需改在线播放或重新下载（core errNativeLocalFile）；expired=播放会话或取流地址失效，需重新解析（core「播放会话已过期」/「链接已失效」/「原章节已变化」）；upstream_error=站源返回异常（兜底）。注意：本仓 vendored core 当前只产生 local_media 与 source_blocked 两个码，其余为契约预留，新增来源前须先补 ADR 与 core 侧实现。"
+        },
+        "retryAt": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "可重试时刻，RFC3339（UTC）。单位：绝对时刻。仅当 code=source_blocked 时出现（core 现状：time.Time 直接 marshal 的 RFC3339 字符串）。"
+        }
+      },
+      "description": "失败信封。允许出现契约未列的扩展字段（如 retryAt 之外的诊断信息），但不得改列字段语义。"
+    },
+    "episodesData": {
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": false,
+      "description": "episodes 意图的载荷。",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Episode"
+          },
+          "description": "该剧的全部集，按 index 升序。不可为 null；空数组表示该剧确无可用集（不等于抓取失败）。"
+        }
+      }
+    },
+    "categoriesData": {
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": false,
+      "description": "categories 意图的载荷。",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Category"
+          },
+          "description": "分类条目；跨源聚合时按 (sourceId, id) 去重。不可为 null；空数组表示该源未声明 CapCategory 或确无分类。"
+        }
+      }
+    }
+  }
+}
