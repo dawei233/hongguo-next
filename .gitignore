@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+.cache/
+.dart_tool/
+*.log
+.DS_Store

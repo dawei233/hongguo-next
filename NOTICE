@@ -1,0 +1,271 @@
+NOTICE —— 来源链路、上游署名与许可说明
+=========================================
+
+本仓（hongguo-next / 红果 Next）是基于本版权人自己名下三个历史项目
+**整合并继续开发**的派生版本，整体以 **GNU General Public License v3.0**
+发布。依照 GPLv3 第 5(a) 条，特此声明来源链路、修改内容与许可状态。
+
+本文件是机器可核查的合规声明。任何一条来源都可以在下文给出的仓库与
+提交处直接核对。
+
+
+一、本仓
+--------
+名称   : 红果 Next（hongguo-next）
+仓库   : https://github.com/dawei233/hongguo-next
+许可   : GNU General Public License v3.0（全文见本目录 `LICENSE`）
+性质   : 修改版本（modified version），非上游原样分发
+说明   : 本仓为全新仓库，不是任何老仓的 fork；它**并入**了版权人本人名下
+         三个老仓的实现，并在本仓统一维护。三个老仓已停止开发。
+
+
+二、为什么全仓采用 GPL-3.0
+--------------------------
+本仓的 GPL-3.0 不是新引入的约束，而是与产品线**既有的分发现实**一致：
+
+1. `hongguo-drama` 的 Windows / macOS 发行物已内置从固定源码构建的
+   **FFmpeg 9.0.2** 与 **x264 b35605ace3ddf7c1a5d67a2eb553f034aef41d55**。
+   x264 是唯一外部编解码静态库（GPLv2-or-later），整体构建为
+   **GPLv3-or-later**；因含 x264，无法走 LGPL 路线。
+   → **既有分发物本来就是 GPLv3 二进制。**
+2. `hongguo-drama` 仓库本身即 `license: GPL-3.0`（见其 `package.json`
+   的 `"license": "GPL-3.0"` 与根目录 `LICENSE`）。
+3. `hongguo-monorepo` 与 `guoapp-android` 是**本版权人本人名下**、
+   `license=NONE`、`fork=false` 的自有仓库，版权人有权将其以 GPL-3.0
+   重新授权并并入本仓。
+
+因此把本仓源码统一为 GPL-3.0 **不新增任何分发义务**，只是让源码侧许可
+与既有的二进制分发现实对齐。
+
+
+三、来源链路与上游署名
+----------------------
+
+### 来源 A —— hongguo-monorepo（PC 端实测能力来源）
+
+    本版权人自有仓
+      仓库   : https://github.com/dawei233/hongguo-monorepo
+      参考提交: cfb1701
+      许可   : 未附 LICENSE 文件（license=NONE），fork=false
+      授权   : 版权人本人所有，已授权以 GPL-3.0 并入本仓
+
+### 来源 B —— guoapp-android（Android 端与 Go 内核来源）
+
+    本站（本版权人自有仓）
+      仓库   : https://github.com/dawei233/guoapp-android
+      参考分支: android/main
+      许可   : 未附 LICENSE 文件（license=NONE），fork=false
+      授权   : 版权人本人所有，已授权以 GPL-3.0 并入本仓
+      溯源   : 由本版权人早期多端仓库 dawei233/guoapp 拆分而来
+
+    上游①（直接上游，请务必注意其许可状态）
+      名称   : guoapp（红果鉴 / 真果鉴）
+      仓库   : https://github.com/zhoufuweigg/guoapp
+      许可   : **未声明许可证**（仓库未附 LICENSE 文件）
+
+    上游②（原始来源，据上游①自述）
+      名称   : 短剧库 APP
+      作者   : 网上通称「鱼佬」（上游① README 自述源码来自该作者）
+      说明   : 上游① 本身即为该源码的打包分发，未提供原始仓库或
+               许可证信息。本站无法进一步核实其仓库地址与许可状态。
+
+    ▸ 如实声明：上游①与上游②**均未声明许可证**。本仓不对其许可状态
+      作任何虚假声明。本仓所含相关代码来自本版权人自有的
+      `guoapp-android`，并由版权人以 GPL-3.0 授权；若上述任何一环的
+      作者或权利人认为本仓的存在不妥，请通过本仓 Issue 联系，我们将
+      立即配合处理（包括移除相关代码或下架仓库）。
+
+### 来源 C —— hongguo-drama（PC 端 UI / 弹幕 / 站源来源）
+
+    本站（本版权人维护）
+      仓库   : https://github.com/dawei233/hongguo-drama
+      参考提交: c884fab
+      许可   : **GNU General Public License v3.0**（原生，与本仓同许可）
+
+    上游链（自近及远）
+      · jackotom/hongguo-drama
+        （hongguo-downloader 的 Mac 移植分支，GPL-3.0）
+      · zhenyong97/hongguo-downloader
+        （hongguo-downloader 的修改版本，GPL-3.0）
+      · 327044572/hongguo-downloader（红果短剧全集批量下载器，GPL-3.0）
+
+    ▸ 本仓依 GPLv3 第 5(a) 条声明：本仓是基于上述项目的**修改版本**。
+      相对于上游，本版权人对 hongguo-drama 所做的主要修改（自 2026 年
+      9 月起）包括：新增浏览页与剧集搜索、内置播放器（边下边看/自动
+      连播/断点续播/剧集管理）、在线播放、兼容模式转码、一键合并全集、
+      文件清理、网络代理配置，修复下载并发数不生效与任务记录误判，
+      移除上游推广内容与品牌标识，重写 README 与打包脚本，并新增
+      Windows x64 / macOS arm64 固定源码媒体构建与三平台同步发行。
+      hongguo-drama 的完整修改声明见其仓库根目录 `NOTICE`。
+
+
+四、本仓并入的文件清单
+----------------------
+以下文件来自上述三个老仓，已并入本仓并在本仓统一维护。此清单用于履行
+GPL-3.0 的来源可追溯与署名义务；本仓**不再**以构建期外部检出（checkout）
+或 git submodule 的方式引用老仓。
+
+### 来自 A（hongguo-monorepo，Python → Go 移植）
+
+    nas-backend/mp4_sanitize.py              (300 行)
+      → core/media/sanitize.go, core/media/boxes.go
+        MP4 净化：递归容器剥离 saio / saiz / senc / sinf / encv / tenc /
+        sgpd / sbgp / cslg，重写 stco / co64 偏移。
+    nas-backend/hongguo_core.py（ffmpeg 解密段，约 240 行）
+      → core/media/ffmpeg.go, core/media/pipeline.go
+        `ffmpeg -decryption_key K -i URL -c copy` 解密链路与参数、以及
+        "faststart remux 后必须二次净化"的实测结论。
+
+### 来自 B（guoapp-android，Go 原样并入）
+
+    native/core/**                   (121 个文件，约 24035 行)
+      → core/
+        含 10 个站源 provider（hongguo / huangguo / huangdou / huangju /
+        yeguo / dsd / sorani / guipian / hanxiaoquan / legacy）、网络与
+        TLS 指纹层、存储层、弹幕抓取与签名实现。
+    native/core/*_test.go            (27 个测试文件)
+      → 随上条一并进仓，作为本仓回归测试网。
+    native/bridge/main.go            (30 行)
+      → bridge/go/main.go
+        导出 DuanjuRequest / DuanjuFree 两个 C 符号的 FFI 桥。
+
+    本仓对上述文件所做的修改（最小改造）：
+      1. Go module 路径统一为 github.com/dawei233/hongguo-next/core；
+      2. **删除** native/core/app_build.go 及其引用处的 buildAllSources
+         编译期门控（含 -ldflags -X 注入），使 13 个站源默认全量开放。
+
+### 来自 C（hongguo-drama，GPL-3.0，原样/移植）
+
+    src/native/xifan.js              (135 行)
+      → core/source/providers/xifan/（JS → Go 移植）
+    src/native/hema.js               (167 行)
+      → core/source/providers/hema/（JS → Go 移植）
+    src/native/danmaku.js            (488 行)
+      → core/danmaku/（JS → Go 移植）
+    src/native/danmaku-sign.js       (385 行)
+      → core/danmaku/sign/（JS → Go 移植）
+    src/native/sm3.js                (36 行)
+      → core/danmaku/sign/sm3/（JS → Go 移植）
+    scripts/fixtures/danmaku-sign-vectors.json
+      → core/danmaku/testdata/vectors.json（原样搬用，作为基准真值）
+    src/native/danmaku-sign.test.cjs (241 行)
+      → core/danmaku/sign/sign_test.go 的向量断言（移植）
+    scripts/fixtures/hema-browse/
+      → core/source/providers/hema/testdata/
+    src/native/licenses/*
+      → third_party/drpys/（第三方许可证全文，必须随本仓分发）
+
+    ▸ **未并入** C 的 UI：`src/components/*`（49 个 React 组件）、
+      `main.js`、`preload.js` 等约 16.5k 行。这是本仓的产品决策
+      （一套 DOM 组件无法同时服务 Electron 与 Android Media3 两端），
+      不是许可限制 —— 本仓与 C 同为 GPL-3.0，搬运本身是合规的。
+
+
+五、算法与第三方署名的追加声明
+------------------------------
+
+1. **App 片源签名与 Spade 取址算法**
+   改编自 woshishiq1/drpys（GPL-3.0），经 N3urda/hongguoTV 的 vendor
+   源码核对。
+      · https://github.com/woshishiq1/drpys
+        commit 22261adfa31435e3b3ef5a730b8a2a75bcaf1715
+      · https://github.com/N3urda/hongguoTV
+        commit eea73e6a45569a2cbbb9440f7cd5290c459b0b70
+   许可证全文随本仓分发，见 `third_party/drpys/LICENSE.drpys.txt`
+   与同目录 `NOTICE.txt`。
+   ⚠ 本算法的两条工程硬约束（RC4 类 KSA 必须复现 `box[i] = box[j]` 的
+   非交换写法；所有 64 位运算必须显式 `& 0xFFFFFFFFFFFFFFFF` 掩码）
+   已在 `core/danmaku/sign/sign_test.go` 中固化为断言 —— 这两处"看似
+   bug 的地方"若被"修正"，会直接导致签名失效。请勿改动。
+
+2. **西饭（xifan）接口路径**
+   接口路径与公开返回结构的核对参考 Hululu007/drpy-node
+   （GPL-3.0，commit 295f2b7047e14122d542a7736cb931e81abcf85c）。
+
+3. **设备注册与协议参数**：来自来源 A 的 `liushen/device_register.py`
+   （243 行）与来源 B 的等价实现，属协议事实。
+
+   说明：公开接口可访问不代表相关作品获得再分发授权。本仓不含任何
+   剧集媒体内容；所有视频、封面与元数据均来自第三方站点，在用户设备上
+   按其原有授权状态获取。本仓不解除、不绕过任何平台的 VIP、付费或
+   授权限制。
+
+
+六、第三方组件许可
+------------------
+
+| 组件 | 许可 | 说明 |
+|---|---|---|
+| FFmpeg 9.0.2 | **GPLv3-or-later** | 内置可执行文件，见第七节 |
+| x264 (b35605a) | **GPLv2-or-later** | FFmpeg 唯一外部编解码静态库 |
+| Electron 44.6.0 | MIT | 打包产物内含 Chromium/Node.js 许可声明 |
+| React / ReactDOM 18.3.1 | MIT | |
+| axios 1.20.0 | MIT | |
+| Anime4K-WebGPU 1.0.0 | MIT | 可选 2x 增强 |
+| ffmpeg_kit_flutter_new_min_gpl 2.6.2 | LGPL-3.0 插件 + GPL-3.0 编解码器（x264/x265/xvidcore/vid.stab）→ **打包后整体 GPL-3.0** | Android 侧 |
+| bogdanfinn/tls-client、bogdanfinn/fhttp、golang.org/x/* 等 Go 依赖 | 各自原始许可（MIT / BSD / Apache-2.0） | 见 core/go.sum |
+
+完整的第三方组件清单与逐项许可声明见本文件第六节与 `docs/ARCHITECTURE.md` §3.4；
+随产物分发的许可全文位于 `third_party/`。
+
+
+七、FFmpeg / x264 对应源码提供义务（GPL-3.0 第 6 条）
+-----------------------------------------------------
+
+本仓的桌面端发行物内置以下第三方程序，用于解密合并、转码与探测：
+
+    FFmpeg 9.0.2        来源: https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz
+    x264 b35605ace3ddf7c1a5d67a2eb553f034aef41d55
+                        来源: https://code.videolan.org/videolan/x264.git
+    构建许可            : GPLv3-or-later（含 x264，无法走 LGPL）
+
+### 对应源码（Corresponding Source）的提供方式
+
+GPLv3 第 6 条要求：分发目标代码（二进制）时，必须提供或承诺提供与被
+分发二进制**完全对应**的完整源码。本仓的履行方式：
+
+1. **对应源码包随 Release 一同发布**，文件名形如：
+
+       ffmpeg-9.0.2-x264-b35605a-<platform>-corresponding-source.tar.gz
+
+   包内含：
+     · FFmpeg 9.0.2 完整源码（未修改的上游源码，SHA256 固定）
+     · x264 完整源码（commit b35605a，未修改的上游源码）
+     · **精确的构建脚本**（如 `scripts/build-ffmpeg-source-win.sh`）
+     · 该次构建的配置日志、工具链版本、二进制 SHA256 哈希
+
+2. **获取途径（双通道）**：从本仓的 GitHub Release 资产直接下载；或按
+   上文上游官方地址自行编译。若你从别处获得本软件的二进制版本，可向
+   分发者索取对应源码，或从本仓获取。
+
+3. **许可全文随产物分发**：打包产物内 `resources/bin/` 一并包含
+   `COPYING.GPLv3`、`COPYING.GPLv2`、`COPYING.LGPLv2.1`、`LICENSE.md`、
+   `WINDOWS-NOTICE.txt` / `MACOS-NOTICE.txt`、x264 许可全文
+   （`WINDOWS-X264-LICENSE.txt` / `MACOS-X264-LICENSE.txt`），以及
+   Windows 侧工具链许可（`WINDOWS-MINGW-LICENSE.txt`、
+   `WINDOWS-GCC-LICENSE.txt`）。
+
+4. ⚠ **仅提供上游项目链接不满足第 6 条。** 必须是与被分发二进制完全
+   对应的那份源码与构建脚本，因此本仓坚持自建源码包并记录二进制哈希。
+
+5. **本仓未修改 FFmpeg 与 x264 的源码**，仅通过命令行调用
+   `ffmpeg` / `ffprobe`（进程边界清晰，不链接其代码）。
+
+6. **Android 侧同理**：若 `apps/android` 使用 `ffmpeg_kit_flutter_new_min_gpl`
+   （LGPL-3.0 插件 + GPL-3.0 编解码器 x264/x265/xvidcore/vid.stab），
+   打包后整体许可为 GPL-3.0，须同样履行对应源码提供义务。
+
+
+八、内容与责任
+--------------
+1. 本软件不含任何剧集媒体内容；所有视频、封面与元数据均来自第三方站点。
+2. 本软件不解除、不绕过任何平台的 VIP、付费或授权限制。
+3. 平台接口随时可能调整；某次可用不保证持续可用。
+4. 使用本软件所产生的一切后果由使用者自行承担。
+5. 本项目仅用于个人学习与技术研究。内容版权归红果/字节跳动及相关
+   版权方所有，请勿用于商业用途。
+
+---
+
+本文件与 `LICENSE` 共同构成本仓的许可与来源声明。若本文件任何一处与
+上游声明冲突，以上游原始声明为准；请通过本仓 Issue 告知，我们会尽快更正。
