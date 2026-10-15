@@ -309,3 +309,7 @@ jobs:
             dist/hongguo-next-arm64-v8a.apk
             dist/SHA256SUMS.txt
           if-no-files-found: error
+          # 账号级 artifact 配额只有 500MB 且重算滞后 6-12h（CI 第六跑实测
+          # "Artifact storage quota has been hit"）。构建产物给 7 天足够下载，
+          # 过期自动释放，不再长期占用配额。
+          retention-days: 7
