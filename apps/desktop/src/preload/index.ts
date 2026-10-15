@@ -96,6 +96,8 @@ const bridge: HnBridge = {
   },
 
   openExternal: (url: string) => ipcRenderer.invoke(IPC.openExternal, url) as Promise<boolean>,
+  coverUrl: (drama: Record<string, unknown>) =>
+    ipcRenderer.invoke(IPC.coverUrl, { drama }) as Promise<string | null>,
 };
 
 contextBridge.exposeInMainWorld('hn', bridge);

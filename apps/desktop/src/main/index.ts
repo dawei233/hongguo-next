@@ -9,6 +9,28 @@ import {
   startKernel,
   stopKernel,
 } from './kernel/service.js';
+import { attachCoverProtocol, coverUrl, registerCoverScheme } from './kernel/coverService.js';
+
+// 自定义协议的特权声明必须在 app ready 之前完成（Electron 硬性要求）。
+registerCoverScheme();
+
+/** ffmpeg 的定位：打包后 resources/bin，开发态 PATH。 */
+function resolveFfmpegPath(): string | null {
+  if (process.env.HN_FFMPEG?.trim()) return process.env.HN_FFMPEG.trim();
+  const candidates = [
+    path.join(process.resourcesPath ?? '', 'bin', 'ffmpeg'),
+    path.join(__dirname, '..', '..', 'resources', 'bin', 'ffmpeg'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      // 只判断存在性；不做 require。
+      if (candidate && path.isAbsolute(candidate)) return candidate;
+    } catch {
+      // 忽略
+    }
+  }
+  return null;
+}
 
 /**
  * 主进程入口：窗口与生命周期、安全设置、IPC 路由。
@@ -144,6 +166,15 @@ function windowOf(event: Electron.IpcMainInvokeEvent): BrowserWindow | null {
 }
 
 function registerIpcHandlers(): void {
+  ipcMain.handle(IPC.coverUrl, async (_event, options: unknown) => {
+    const opts = (options ?? {}) as InvokeOptions;
+    const drama = opts.payload && typeof opts.payload === 'object' ? opts.payload : {};
+    try {
+      return await coverUrl(drama);
+    } catch {
+      return null;
+    }
+  });
   ipcMain.handle(IPC.invoke, async (_event, action: unknown, options: unknown) => {
     if (typeof action !== 'string' || action.length === 0) {
       return { ok: false, error: '桥接动作无效', code: 'invalid_request' };
@@ -216,6 +247,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     registerIpcHandlers();
+    attachCoverProtocol(resolveFfmpegPath());
     mainWindow = createMainWindow();
     startKernel();
 

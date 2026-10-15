@@ -135,6 +135,12 @@ export interface HnBridge {
 
   /** 用系统浏览器打开外链（http/https only）。 */
   openExternal(url: string): Promise<boolean>;
+
+  /**
+   * 取一部剧的可显示封面 URL（`hncover://` 本地协议，HEIC 已经 ffmpeg 转成 JPEG）。
+   * 失败返回 null —— 渲染层显示占位，**不要退回远端 HEIC URL**（会渲染成裂图）。
+   */
+  coverUrl(drama: unknown): Promise<string | null>;
 }
 
 /** 渲染进程读取 window.hn 的唯一入口，非 Electron 环境（vitest/jsdom）返回 null。 */
@@ -155,6 +161,7 @@ export const IPC = {
   windowSetFullScreen: 'hn:window:set-full-screen',
   windowGetState: 'hn:window:get-state',
   openExternal: 'hn:open-external',
+  coverUrl: 'hn:cover-url',
   eventKernelStatus: 'hn:event:kernel-status',
   eventWindowState: 'hn:event:window-state',
 } as const;

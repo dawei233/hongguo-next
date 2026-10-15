@@ -2,6 +2,7 @@ import { Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatCount } from '@/lib/utils';
+import { useCoverUrl } from '@/lib/useCoverUrl';
 import type { SeriesView } from '@/lib/adapt';
 
 /**
@@ -9,6 +10,9 @@ import type { SeriesView } from '@/lib/adapt';
  *
  * 整块是一个 `<button>`：现役 `.browse-card{display:block}` 的可用性不能被 "把标题也做成
  * 链接" 破坏。封面缺图时**不留白框**，用 poster 底色兜住，避免网格高度在加载中抖动。
+ *
+ * 封面不经 <img src={series.cover}>：那是 fqnovelpic.com 的 HEIC（Chromium 不支持）
+ * 且直接取 403。经 useCoverUrl 走主进程 prepareCover + ffmpeg 转码的本地 JPEG。
  */
 export interface PosterCardProps {
   series: SeriesView;
@@ -17,6 +21,8 @@ export interface PosterCardProps {
 }
 
 export function PosterCard({ series, rank, onOpen }: PosterCardProps) {
+  const cover = useCoverUrl(series.raw ?? null);
+  const showCover = cover ?? null;
   return (
     <button
       type="button"
@@ -25,9 +31,9 @@ export function PosterCard({ series, rank, onOpen }: PosterCardProps) {
       aria-label={`打开《${series.title}》`}
     >
       <span className="relative block aspect-[3/4] overflow-hidden rounded-xl bg-secondary">
-        {series.cover ? (
+        {showCover ? (
           <img
-            src={series.cover}
+            src={showCover}
             alt=""
             loading="lazy"
             decoding="async"

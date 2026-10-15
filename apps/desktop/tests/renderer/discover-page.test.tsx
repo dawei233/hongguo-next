@@ -69,6 +69,7 @@ function createBridge(overrides: Partial<HnBridge> = {}): HnBridge {
       getState: async () => ({ maximized: false, fullScreen: false, focused: true }),
     },
     openExternal: async () => true,
+    coverUrl: async () => null,
     ...overrides,
   };
 }
