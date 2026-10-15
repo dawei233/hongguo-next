@@ -1,0 +1,12 @@
+# pnpm 12 把「允许运行依赖的构建脚本」放在这里（不再读 package.json 的 pnpm 字段）。
+#
+# 为什么必须放行这三个：
+# - electron：postinstall 下载 Electron 运行时二进制，不放行则 `electron` 命令不存在；
+# - electron-winstaller：electron-builder 打 Windows NSIS 包时用到的原生辅助工具；
+# - esbuild：vite / vitest 的底层打包器，需要它自己的原生二进制。
+#
+# 其余依赖一律不放行（默认拒绝），避免任意依赖在安装期执行脚本。
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true

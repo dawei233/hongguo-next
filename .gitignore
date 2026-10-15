@@ -18,3 +18,10 @@ apps/android/.flutter-plugins-dependencies
 apps/android/android/local.properties
 apps/android/android/.gradle/
 apps/android/ios/Flutter/ephemeral/
+
+# Python 工具产物
+__pycache__/
+
+# 冒烟截图（本地验证产物，不进仓）
+apps/desktop/electron-smoke.png
+apps/desktop/electron-dev-smoke.png

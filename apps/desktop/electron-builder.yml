@@ -1,0 +1,55 @@
+appId: com.hongguo.next
+productName: 红果短剧
+copyright: GPL-3.0 · hongguo-next
+
+directories:
+  output: release
+  buildResources: build
+
+# 主进程用 CommonJS（Electron 对 ESM 主进程的支持仍有边界），渲染进程是普通 Vite 产物。
+files:
+  - dist/**/*
+  - package.json
+  - '!**/*.map'
+
+extraResources:
+  # hncore-server 子进程：由 scripts/build-core.mjs 产出，随包分发到 resources/bin。
+  - from: resources/bin
+    to: bin
+    filter: ['**/*']
+
+asar: true
+asarUnpack:
+  - resources/**
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  category: public.app-category.entertainment
+  # 公证与签名所需凭据走环境变量（CSC_LINK / CSC_KEY_PASSWORD / APPLE_ID ...），
+  # 本仓不内置任何证书；未提供时 electron-builder 产出未签名包。
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: AudioVideo

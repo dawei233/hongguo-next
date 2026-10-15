@@ -1,0 +1,45 @@
+/*
+ * 渲染层样式入口（承担 DESIGN-SYSTEM.md §2.1 里 `globals.css` 的角色）。
+ *
+ * 为什么需要这个文件，而不是在 main.tsx 里 `import 'tailwindcss'`：
+ * Tailwind v4 的「自动内容探测」以**引入 tailwindcss 的那个 CSS 文件所在目录**为基准。
+ * 从 TS 直接 import tailwindcss，基准会落到 node_modules/tailwindcss/，扫描不到我们的
+ * 组件，产物里一个工具类都不会生成。所以这里显式写 `@source`。
+ *
+ * tokens.css 由另一位工程师产出（现落在 src/styles/，含 :root/.dark 令牌真身 +
+ * `@theme` / `@theme inline` / `@utility`）。它必须走 **CSS 的 @import**，而不是从 TS 里
+ * `import './styles/tokens.css'`：Tailwind 只在「引入 tailwindcss 的那张 CSS 图」里处理
+ * @theme 与 @utility，从 JS 侧引入的 CSS 文件会被当作普通样式表透传 —— 颜色/字号/圆角
+ * 的语义映射与 @utility 工具类都会静默失效（工具类全部变空，页面看起来“没样式”）。
+ *
+ * 令牌布局变化时只改这一行路径：`../styles/tokens.css`。
+ */
+@import "tailwindcss";
+@source "./**/*.{ts,tsx}";
+@import "../styles/tokens.css";
+
+/* shadcn 的 class 策略暗色变体：`.dark` 挂载点见 index.html 与 index.html 的根 class。 */
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  /* 令牌表规定 body 用 var(--font-sans) / var(--text-base)（§3.2 正文基准 13px）。 */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* 拖拽区（标题栏）与控件区的分工由 -webkit-app-region 决定，见 App.tsx。 */
+  button,
+  [role="button"] {
+    -webkit-app-region: no-drag;
+  }
+}

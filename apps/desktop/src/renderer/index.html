@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      CSP 说明（有意的取舍）：
+      - `script-src 'self' 'unsafe-inline'`：dev 下 @vitejs/plugin-react 会注入内联的
+        react-refresh preamble，禁掉内联会让 HMR 直接失效。渲染进程不加载任何远端内容
+        （main/index.ts 拦截导航与新窗口 / 关闭 nodeIntegration / 开沙箱），因此这条放宽
+        的实际暴露面很小。生产环境更严的做法是在主进程
+        `session.defaultSession.webRequest.onHeadersReceived` 里按 `app.isPackaged`
+        下发响应头 CSP，那是 main 侧改动，留给后续（见交付说明「未完成项」）。
+      - `media-src`/`connect-src`/`img-src` 放开 http(s)：站源 CDN 的 m3u8/分片/封面都在远端，
+        内核 resolve 出来的 URL 就是这个来源。本仓不做任何**自己发起**的 provider 请求，
+        播放请求由 hls.js 按内核给出的 URL 发出。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; connect-src 'self' https: http: ws: wss:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>红果短剧</title>
+  </head>
+  <body class="bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

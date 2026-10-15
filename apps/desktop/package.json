@@ -1,0 +1,60 @@
+{
+  "name": "@hongguo-next/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "红果短剧 PC 端（Electron + React 19 + Vite）",
+  "license": "GPL-3.0",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "concurrently -k -n vite,electron -c cyan,magenta \"vite\" \"wait-on tcp:5273 && node scripts/dev-electron.mjs\"",
+    "dev:renderer": "vite",
+    "build": "pnpm run build:renderer && pnpm run build:main",
+    "build:renderer": "vite build",
+    "build:main": "node scripts/build-main.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint:player": "node scripts/guard-videojs8.mjs",
+    "check:tokens": "node scripts/guard-tokens.mjs",
+    "core:build": "node scripts/build-core.mjs",
+    "dist": "pnpm run build && electron-builder --config electron-builder.yml",
+    "dist:dir": "pnpm run build && electron-builder --dir --config electron-builder.yml"
+  },
+  "dependencies": {
+    "@videojs/hlsjs-video": "10.1.0",
+    "@videojs/react": "10.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.545.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.4",
+    "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.16",    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "concurrently": "^9.2.1",
+    "electron": "^38.2.2",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.25.10",
+    "jsdom": "^27.0.0",
+    "tailwindcss": "^4.1.16",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.9",
+    "vitest": "^3.2.4",
+    "wait-on": "^9.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "electron-winstaller",
+      "esbuild"
+    ]
+  }
+}

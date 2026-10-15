@@ -1,0 +1,25 @@
+# ── 依赖 ─────────────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── 构建产物 ─────────────────────────────────────────────────────────────────
+dist/
+release/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# ── 内核子进程产物（不入库）──────────────────────────────────────────────────
+# resources/bin/hncore-server 由 `pnpm core:build`（scripts/build-core.mjs）编译
+# core/cmd/hncore-server 的 Go 源码得到，当前约 22MB 的本地可执行文件。
+# 它是本机/CI 产物而非源码：入库会让仓库体积与平台耦合（Windows 是 .exe）。
+# electron-builder.yml 的 extraResources 直接读该目录，缺失时应用走空态降级。
+resources/bin/
+
+# ── 编辑器 / 系统 ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+
+# 本机冒烟验证截图（Xvfb 下跑打包/开发产物留下的证据图，不是设计资产）
+*-smoke.png

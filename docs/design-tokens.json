@@ -1,0 +1,1846 @@
+{
+  "$comment": "hongguo-next 设计令牌唯一真源（机器可读）。由 tools/gen_tokens.py 导出 CSS，由 tools/gen_tokens.py/check_tokens.py 校验 Flutter 侧 apps/android/lib/ui/tokens.dart。设计说明见 docs/DESIGN-SYSTEM.md §3。",
+  "meta": {
+    "name": "hongguo-next design tokens",
+    "version": "1.0.0",
+    "spec": "docs/DESIGN-SYSTEM.md §3",
+    "colorAuthority": "hex",
+    "colorAuthorityReason": "Flutter 侧 Color(int) 无法表达 oklch，HEX 是两端都能无损表达的形式；oklch 为 CSS 表达，必须能往返到同一 hex（check_tokens.py 断言）。",
+    "cssTarget": "apps/desktop/src/styles/tokens.css",
+    "dartTarget": "apps/android/lib/ui/tokens.dart",
+    "dartMode": "compare-only（本真源只校验 Dart，不覆盖它）",
+    "wcag": {
+      "textNormal": 4.5,
+      "textLarge": 3.0,
+      "nonText": 3.0,
+      "note": "边框类令牌不声明门槛：§3.5 边框或投影二选一，边框为装饰性分隔；表单控件可辨识性由 --input + --ring 焦点环共同保证"
+    }
+  },
+  "colorOrder": [
+    "background",
+    "card",
+    "popover",
+    "surface",
+    "surface-hover",
+    "foreground",
+    "foreground-muted",
+    "foreground-subtle",
+    "primary",
+    "primary-hover",
+    "primary-foreground",
+    "primary-subtle",
+    "primary-foreground-soft",
+    "secondary",
+    "secondary-foreground",
+    "muted",
+    "muted-foreground",
+    "accent",
+    "accent-foreground",
+    "destructive",
+    "destructive-foreground",
+    "warning",
+    "warning-foreground",
+    "success",
+    "success-foreground",
+    "gold",
+    "border",
+    "border-subtle",
+    "input",
+    "ring",
+    "sidebar",
+    "sidebar-foreground",
+    "sidebar-primary",
+    "sidebar-primary-foreground",
+    "sidebar-border",
+    "skeleton",
+    "scrim",
+    "stage",
+    "danmaku",
+    "scroll-thumb"
+  ],
+  "colors": {
+    "background": {
+      "role": "应用画布",
+      "tailwind": "--color-background",
+      "light": {
+        "oklch": "oklch(0.985 0.003 85)",
+        "hex": "#fbfaf8",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.180 0.004 265)",
+        "hex": "#111213",
+        "oklchSource": "doc"
+      },
+      "dart": "canvas"
+    },
+    "card": {
+      "role": "卡片/面板",
+      "tailwind": "--color-card",
+      "light": {
+        "oklch": "oklch(1 0 0)",
+        "hex": "#ffffff",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.232 0.005 265)",
+        "hex": "#1c1d20",
+        "oklchSource": "doc"
+      },
+      "dart": "card"
+    },
+    "popover": {
+      "role": "浮层",
+      "tailwind": "--color-popover",
+      "light": {
+        "oklch": "oklch(1 0 0)",
+        "hex": "#ffffff",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.232 0.005 265)",
+        "hex": "#1c1d20",
+        "oklchSource": "doc"
+      },
+      "dart": "popover"
+    },
+    "surface": {
+      "role": "次级面（侧栏、inset）",
+      "tailwind": "--color-surface",
+      "light": {
+        "oklch": "oklch(0.950 0.005 78)",
+        "hex": "#f0eeeb",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.272 0.005 265)",
+        "hex": "#262729",
+        "oklchSource": "doc"
+      },
+      "dart": "surface"
+    },
+    "surface-hover": {
+      "role": "行 hover",
+      "tailwind": "--color-surface-hover",
+      "light": {
+        "oklch": "oklch(0.92891 0.00746 80.72)",
+        "hex": "#eae7e2",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.32894 0.00922 268.38)",
+        "hex": "#33353a",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "surfaceHover"
+    },
+    "foreground": {
+      "role": "主文字",
+      "tailwind": "--color-foreground",
+      "light": {
+        "oklch": "oklch(0.264 0.004 107)",
+        "hex": "#252523",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.946 0.007 89)",
+        "hex": "#efede8",
+        "oklchSource": "doc"
+      },
+      "dart": "fg"
+    },
+    "foreground-muted": {
+      "role": "次要文字",
+      "tailwind": "--color-foreground-muted",
+      "light": {
+        "oklch": "oklch(0.510 0.008 89)",
+        "hex": "#686661",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.724 0.013 80)",
+        "hex": "#aaa59d",
+        "oklchSource": "doc"
+      },
+      "dart": "fgMuted"
+    },
+    "foreground-subtle": {
+      "role": "三级文字/占位",
+      "tailwind": "--color-foreground-subtle",
+      "light": {
+        "oklch": "oklch(0.557 0.012 82)",
+        "hex": "#77736c",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.810 0.012 80)",
+        "hex": "#c5c0b8",
+        "oklchSource": "doc"
+      },
+      "dart": "fgSubtle"
+    },
+    "primary": {
+      "role": "品牌红/主要动作",
+      "tailwind": "--color-primary",
+      "light": {
+        "oklch": "oklch(0.558 0.181 27)",
+        "hex": "#c83933",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.700 0.178 28)",
+        "hex": "#f96a5d",
+        "oklchSource": "doc"
+      },
+      "dart": "primary"
+    },
+    "primary-hover": {
+      "role": "——",
+      "tailwind": "--color-primary-hover",
+      "light": {
+        "oklch": "oklch(0.498 0.170 27)",
+        "hex": "#af2a27",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.756 0.162 30)",
+        "hex": "#ff8370",
+        "oklchSource": "doc"
+      },
+      "dart": "primaryHover"
+    },
+    "primary-foreground": {
+      "role": "品牌底上的字",
+      "tailwind": "--color-primary-foreground",
+      "light": {
+        "oklch": "oklch(0.985 0.005 27)",
+        "hex": "#fdf9f8",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.165 0.035 27)",
+        "hex": "#1b0806",
+        "oklchSource": "doc"
+      },
+      "dart": "onPrimary"
+    },
+    "primary-subtle": {
+      "role": "选中底/弱强调面",
+      "tailwind": "--color-primary-subtle",
+      "light": {
+        "oklch": "oklch(0.947 0.019 26)",
+        "hex": "#fae9e7",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.330 0.062 27)",
+        "hex": "#512824",
+        "oklchSource": "doc"
+      },
+      "dart": "primarySubtle"
+    },
+    "primary-foreground-soft": {
+      "role": "弱强调面上的字",
+      "tailwind": "--color-primary-foreground-soft",
+      "light": {
+        "oklch": "oklch(0.47399 0.15502 26.92)",
+        "hex": "#a12b27",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.79598 0.09756 25.68)",
+        "hex": "#f5a49c",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "onPrimarySubtle"
+    },
+    "secondary": {
+      "role": "次级填充按钮",
+      "tailwind": "--color-secondary",
+      "light": {
+        "oklch": "oklch(0.950 0.005 78)",
+        "hex": "#f0eeeb",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.272 0.005 265)",
+        "hex": "#262729",
+        "oklchSource": "doc"
+      },
+      "dart": "secondary"
+    },
+    "secondary-foreground": {
+      "role": "——",
+      "tailwind": "--color-secondary-foreground",
+      "light": {
+        "oklch": "oklch(0.264 0.004 107)",
+        "hex": "#252523",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.946 0.007 89)",
+        "hex": "#efede8",
+        "oklchSource": "doc"
+      },
+      "dart": "onSecondary"
+    },
+    "muted": {
+      "role": "弱面",
+      "tailwind": "--color-muted",
+      "light": {
+        "oklch": "oklch(0.950 0.005 78)",
+        "hex": "#f0eeeb",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.272 0.005 265)",
+        "hex": "#262729",
+        "oklchSource": "doc"
+      },
+      "dart": "muted"
+    },
+    "muted-foreground": {
+      "role": "——",
+      "tailwind": "--color-muted-foreground",
+      "light": {
+        "oklch": "oklch(0.510 0.008 89)",
+        "hex": "#686661",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.724 0.013 80)",
+        "hex": "#aaa59d",
+        "oklchSource": "doc"
+      },
+      "dart": "mutedFg"
+    },
+    "accent": {
+      "role": "hover/焦点面",
+      "tailwind": "--color-accent",
+      "light": {
+        "oklch": "oklch(0.92891 0.00746 80.72)",
+        "hex": "#eae7e2",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.32894 0.00922 268.38)",
+        "hex": "#33353a",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "accent"
+    },
+    "accent-foreground": {
+      "role": "——",
+      "tailwind": "--color-accent-foreground",
+      "light": {
+        "oklch": "oklch(0.264 0.004 107)",
+        "hex": "#252523",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.946 0.007 89)",
+        "hex": "#efede8",
+        "oklchSource": "doc"
+      },
+      "dart": "onAccent"
+    },
+    "destructive": {
+      "role": "危险/错误",
+      "tailwind": "--color-destructive",
+      "light": {
+        "oklch": "oklch(0.530 0.171 24)",
+        "hex": "#ba3437",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.785 0.096 19)",
+        "hex": "#f0a0a1",
+        "oklchSource": "doc"
+      },
+      "dart": "danger"
+    },
+    "destructive-foreground": {
+      "role": "——",
+      "tailwind": "--color-destructive-foreground",
+      "light": {
+        "oklch": "oklch(0.985 0.005 27)",
+        "hex": "#fdf9f8",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.165 0.035 27)",
+        "hex": "#1b0806",
+        "oklchSource": "doc"
+      },
+      "dart": "onDanger"
+    },
+    "warning": {
+      "role": "警告",
+      "tailwind": "--color-warning",
+      "light": {
+        "oklch": "oklch(0.558 0.107 72)",
+        "hex": "#9a681e",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.807 0.095 79)",
+        "hex": "#e1b978",
+        "oklchSource": "doc"
+      },
+      "dart": "warning"
+    },
+    "warning-foreground": {
+      "role": "——",
+      "tailwind": "--color-warning-foreground",
+      "light": {
+        "oklch": "oklch(0.985 0.010 79)",
+        "hex": "#fef9f3",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.240 0.060 79)",
+        "hex": "#2e1b00",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dart": "onWarning"
+    },
+    "success": {
+      "role": "已下载/已完成",
+      "tailwind": "--color-success",
+      "light": {
+        "oklch": "oklch(0.509 0.078 167)",
+        "hex": "#32745c",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.787 0.069 162)",
+        "hex": "#92c8ac",
+        "oklchSource": "doc"
+      },
+      "dart": "success"
+    },
+    "success-foreground": {
+      "role": "——",
+      "tailwind": "--color-success-foreground",
+      "light": {
+        "oklch": "oklch(0.985 0.005 167)",
+        "hex": "#f7fbf9",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.180 0.040 167)",
+        "hex": "#00170e",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dart": "onSuccess"
+    },
+    "gold": {
+      "role": "VIP/会员（承接 guoapp tertiary）",
+      "tailwind": "--color-gold",
+      "light": {
+        "oklch": "oklch(0.760 0.130 75)",
+        "hex": "#e1a447",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.855 0.123 83)",
+        "hex": "#f6c86b",
+        "oklchSource": "doc"
+      },
+      "dart": "gold"
+    },
+    "border": {
+      "role": "卡片边框",
+      "tailwind": "--color-border",
+      "light": {
+        "oklch": "oklch(0.911 0.008 81)",
+        "hex": "#e4e1dc",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.384 0.011 85)",
+        "hex": "#46433d",
+        "oklchSource": "doc"
+      },
+      "dart": "border"
+    },
+    "border-subtle": {
+      "role": "分隔线",
+      "tailwind": "--color-border-subtle",
+      "light": {
+        "oklch": "oklch(0.941 0.00744 80.72)",
+        "hex": "#eeebe6",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.34099 0.00898 88.74)",
+        "hex": "#3a3833",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "borderSubtle"
+    },
+    "input": {
+      "role": "输入框边框",
+      "tailwind": "--color-input",
+      "light": {
+        "oklch": "oklch(0.83401 0.01061 81.79)",
+        "hex": "#ccc8c1",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.51682 0.01448 75.26)",
+        "hex": "#6d675f",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "input"
+    },
+    "ring": {
+      "role": "焦点环",
+      "tailwind": "--color-ring",
+      "light": {
+        "oklch": "oklch(0.558 0.181 27)",
+        "hex": "#c83933",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.700 0.178 28)",
+        "hex": "#f96a5d",
+        "oklchSource": "doc"
+      },
+      "dart": "ring"
+    },
+    "sidebar": {
+      "role": "侧栏",
+      "tailwind": "--color-sidebar",
+      "light": {
+        "oklch": "oklch(0.950 0.005 78)",
+        "hex": "#f0eeeb",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.210 0.005 265)",
+        "hex": "#17181b",
+        "oklchSource": "doc"
+      },
+      "dart": "sidebar"
+    },
+    "sidebar-foreground": {
+      "role": "侧栏文字",
+      "tailwind": "--color-sidebar-foreground",
+      "light": {
+        "oklch": "oklch(0.510 0.008 89)",
+        "hex": "#686661",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.810 0.012 80)",
+        "hex": "#c5c0b8",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dart": "sidebarFg"
+    },
+    "sidebar-primary": {
+      "role": "侧栏选中底",
+      "tailwind": "--color-sidebar-primary",
+      "light": {
+        "oklch": "oklch(0.947 0.019 26)",
+        "hex": "#fae9e7",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.330 0.062 27)",
+        "hex": "#512824",
+        "oklchSource": "doc"
+      },
+      "dart": "sidebarPrimary"
+    },
+    "sidebar-primary-foreground": {
+      "role": "侧栏选中字",
+      "tailwind": "--color-sidebar-primary-foreground",
+      "light": {
+        "oklch": "oklch(0.47399 0.15502 26.92)",
+        "hex": "#a12b27",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.79598 0.09756 25.68)",
+        "hex": "#f5a49c",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "sidebarOnPrimary"
+    },
+    "sidebar-border": {
+      "role": "——",
+      "tailwind": "--color-sidebar-border",
+      "light": {
+        "oklch": "oklch(0.911 0.008 81)",
+        "hex": "#e4e1dc",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.384 0.011 85)",
+        "hex": "#46433d",
+        "hexSource": "computed",
+        "oklchSource": "doc"
+      },
+      "dart": "sidebarBorder"
+    },
+    "skeleton": {
+      "role": "骨架屏",
+      "tailwind": "--color-skeleton",
+      "light": {
+        "oklch": "oklch(0.92284 0.00747 80.72)",
+        "hex": "#e8e5e0",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.30476 0.00771 264.45)",
+        "hex": "#2d2f33",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "skeleton"
+    },
+    "scrim": {
+      "role": "模态遮罩",
+      "tailwind": "--color-scrim",
+      "light": {
+        "oklch": "oklch(0.300 0.020 60 / 0.45)",
+        "hex": "#362c24",
+        "alpha": 0.45,
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0 0 0 / 0.66)",
+        "hex": "#000000",
+        "alpha": 0.66,
+        "oklchSource": "doc"
+      },
+      "dart": "scrim"
+    },
+    "stage": {
+      "role": "**播放台恒定暗色**，双主题同值",
+      "tailwind": "--color-stage",
+      "light": {
+        "oklch": "oklch(0.145 0.004 265)",
+        "hex": "#090a0c",
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.145 0.004 265)",
+        "hex": "#090a0c",
+        "oklchSource": "doc"
+      },
+      "constant": true,
+      "dart": "stage"
+    },
+    "danmaku": {
+      "role": "弹幕文字（播放台上恒定）",
+      "tailwind": "--color-danmaku",
+      "light": {
+        "oklch": "oklch(0.980 0.010 90 / 0.92)",
+        "hex": "#fbf8f1",
+        "alpha": 0.92,
+        "oklchSource": "doc"
+      },
+      "dark": {
+        "oklch": "oklch(0.980 0.010 90 / 0.92)",
+        "hex": "#fbf8f1",
+        "alpha": 0.92,
+        "oklchSource": "doc"
+      },
+      "constant": true,
+      "dart": "danmaku"
+    },
+    "scroll-thumb": {
+      "role": "滚动条",
+      "tailwind": "--color-scroll-thumb",
+      "light": {
+        "oklch": "oklch(0.81529 0.01067 81.79)",
+        "hex": "#c6c2bb",
+        "oklchSource": "derived-from-hex"
+      },
+      "dark": {
+        "oklch": "oklch(0.51682 0.01448 75.26)",
+        "hex": "#6d675f",
+        "oklchSource": "derived-from-hex"
+      },
+      "dart": "scrollThumb"
+    }
+  },
+  "colorAliases": {
+    "card-foreground": {
+      "of": "foreground",
+      "role": "shadcn card.tsx 用名（§3.1 无此令牌，语义等于主文字）"
+    },
+    "popover-foreground": {
+      "of": "foreground",
+      "role": "shadcn popover/dropdown/tooltip 用名"
+    },
+    "sidebar-accent": {
+      "of": "accent",
+      "role": "shadcn sidebar.tsx 用名"
+    },
+    "sidebar-accent-foreground": {
+      "of": "accent-foreground",
+      "role": "shadcn sidebar.tsx 用名"
+    },
+    "sidebar-ring": {
+      "of": "ring",
+      "role": "shadcn sidebar.tsx 用名"
+    }
+  },
+  "typography": {
+    "families": {
+      "sans": {
+        "tailwind": "--font-sans",
+        "css": "\"PingFang SC\", \"HarmonyOS Sans SC\", \"Microsoft YaHei UI\", \"Microsoft YaHei\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", system-ui, sans-serif",
+        "role": "全部 UI 文字（Windows 优先的系统中文栈，不内嵌 webfont）"
+      },
+      "numeric": {
+        "tailwind": "--font-numeric",
+        "css": "\"SF Mono\", \"JetBrains Mono\", ui-monospace, Menlo, Consolas, monospace",
+        "role": "进度/时长/热度等数字（配 tabular-nums，避免抖动）",
+        "dart": "FontFeature.tabularFigures()"
+      }
+    },
+    "scale": {
+      "2xs": {
+        "tailwind": "--text-2xs",
+        "sizePx": 10,
+        "lineHeight": 1.4,
+        "letterSpacing": "0.02em",
+        "weight": 600,
+        "role": "角标、热度数字（等宽）",
+        "dart": "t2xs"
+      },
+      "xs": {
+        "tailwind": "--text-xs",
+        "sizePx": 11,
+        "lineHeight": 1.5,
+        "letterSpacing": "0.01em",
+        "weight": 500,
+        "role": "集数、时长、标签",
+        "dart": "tXs"
+      },
+      "sm": {
+        "tailwind": "--text-sm",
+        "sizePx": 12,
+        "lineHeight": 1.5,
+        "letterSpacing": "0",
+        "weight": 500,
+        "role": "辅助说明、侧栏",
+        "dart": "tSm"
+      },
+      "base": {
+        "tailwind": "--text-base",
+        "sizePx": 13,
+        "lineHeight": 1.55,
+        "letterSpacing": "0",
+        "weight": 400,
+        "role": "正文基准（承接现役 13px）",
+        "dart": "tBase"
+      },
+      "md": {
+        "tailwind": "--text-md",
+        "sizePx": 15,
+        "lineHeight": 1.5,
+        "letterSpacing": "-0.01em",
+        "weight": 600,
+        "role": "卡片标题、剧名",
+        "dart": "tMd"
+      },
+      "lg": {
+        "tailwind": "--text-lg",
+        "sizePx": 17,
+        "lineHeight": 1.4,
+        "letterSpacing": "-0.015em",
+        "weight": 600,
+        "role": "区块标题",
+        "dart": "tLg"
+      },
+      "xl": {
+        "tailwind": "--text-xl",
+        "sizePx": 20,
+        "lineHeight": 1.35,
+        "letterSpacing": "-0.02em",
+        "weight": 700,
+        "role": "页面副标题",
+        "dart": "tXl"
+      },
+      "2xl": {
+        "tailwind": "--text-2xl",
+        "sizePx": 26,
+        "lineHeight": 1.25,
+        "letterSpacing": "-0.025em",
+        "weight": 700,
+        "role": "页面主标题",
+        "dart": "t2xl"
+      },
+      "3xl": {
+        "tailwind": "--text-3xl",
+        "sizePx": 32,
+        "lineHeight": 1.2,
+        "letterSpacing": "-0.03em",
+        "weight": 700,
+        "role": "详情页剧名（Android 端 24px）",
+        "dart": "t3xl"
+      },
+      "display": {
+        "tailwind": "--text-display",
+        "sizePx": 44,
+        "lineHeight": 1.1,
+        "letterSpacing": "-0.035em",
+        "weight": 800,
+        "role": "播放器标题、启动页",
+        "dart": "tDisplay"
+      }
+    },
+    "features": {
+      "tabularNums": {
+        "css": "font-variant-numeric: tabular-nums",
+        "dart": "HnTypo.tabular",
+        "role": "所有会变化的数字"
+      }
+    }
+  },
+  "spacing": {
+    "basePx": 4,
+    "tailwind": "--spacing",
+    "scale": {
+      "0.5": {
+        "px": 2,
+        "tailwind": "p-0.5",
+        "dart": null
+      },
+      "1": {
+        "px": 4,
+        "tailwind": "p-1",
+        "dart": "step1"
+      },
+      "1.5": {
+        "px": 6,
+        "tailwind": "p-1.5",
+        "dart": null
+      },
+      "2": {
+        "px": 8,
+        "tailwind": "p-2",
+        "dart": "step2"
+      },
+      "2.5": {
+        "px": 10,
+        "tailwind": "p-2.5",
+        "dart": null
+      },
+      "3": {
+        "px": 12,
+        "tailwind": "p-3",
+        "dart": "step3"
+      },
+      "4": {
+        "px": 16,
+        "tailwind": "p-4",
+        "dart": "step4"
+      },
+      "5": {
+        "px": 20,
+        "tailwind": "p-5",
+        "dart": "step5"
+      },
+      "6": {
+        "px": 24,
+        "tailwind": "p-6",
+        "dart": "step6"
+      },
+      "8": {
+        "px": 32,
+        "tailwind": "p-8",
+        "dart": "step8"
+      },
+      "10": {
+        "px": 40,
+        "tailwind": "p-10",
+        "dart": "step10"
+      },
+      "12": {
+        "px": 48,
+        "tailwind": "p-12",
+        "dart": "step12"
+      }
+    },
+    "layout": {
+      "sidebar-w": {
+        "css": "--sidebar-w",
+        "px": 214,
+        "role": "侧栏展开宽"
+      },
+      "sidebar-w-collapsed": {
+        "css": "--sidebar-w-collapsed",
+        "px": 64,
+        "role": "侧栏图标态宽"
+      },
+      "toolbar-h": {
+        "css": "--toolbar-h",
+        "px": 48,
+        "role": "顶部工具条高（macOS 左上预留 78px 给红绿灯）"
+      },
+      "content-max": {
+        "css": "--content-max",
+        "px": 1180,
+        "role": "内容最大宽"
+      },
+      "settings-max": {
+        "css": "--settings-max",
+        "px": 840,
+        "role": "设置页最大宽"
+      },
+      "poster-min": {
+        "css": "--poster-min",
+        "px": 150,
+        "role": "海报网格最小列宽"
+      },
+      "stage-max": {
+        "css": "--stage-max",
+        "px": 1080,
+        "role": "播放器画面最大宽"
+      }
+    }
+  },
+  "radius": {
+    "basePx": 10,
+    "base": {
+      "css": "--radius",
+      "tailwind": "rounded-lg",
+      "rem": 0.625,
+      "px": 10,
+      "role": "卡片",
+      "dart": null
+    },
+    "scale": {
+      "xs": {
+        "tailwind": "--radius-xs",
+        "multiplier": 0.5,
+        "px": 5.0,
+        "role": "徽标/进度点",
+        "dart": "radiusXs"
+      },
+      "sm": {
+        "tailwind": "--radius-sm",
+        "multiplier": 0.7,
+        "px": 7.0,
+        "role": "按钮/输入/集数格",
+        "dart": "radiusSm"
+      },
+      "md": {
+        "tailwind": "--radius-md",
+        "multiplier": 0.9,
+        "px": 9.0,
+        "role": "卡片内容块",
+        "dart": "radiusMd"
+      },
+      "lg": {
+        "tailwind": "--radius-lg",
+        "multiplier": 1.0,
+        "px": 10.0,
+        "role": "卡片",
+        "dart": "radiusLg"
+      },
+      "xl": {
+        "tailwind": "--radius-xl",
+        "multiplier": 1.3,
+        "px": 13.0,
+        "role": "海报",
+        "dart": "radiusXl"
+      },
+      "2xl": {
+        "tailwind": "--radius-2xl",
+        "multiplier": 1.6,
+        "px": 16.0,
+        "role": "Sheet/弹层",
+        "dart": "radius2xl"
+      },
+      "3xl": {
+        "tailwind": "--radius-3xl",
+        "multiplier": 2.0,
+        "px": 20.0,
+        "role": "Dialog",
+        "dart": "radius3xl"
+      },
+      "4xl": {
+        "tailwind": "--radius-4xl",
+        "multiplier": 2.4,
+        "px": 24.0,
+        "role": "超大容器（扩展档，闭合 Tailwind 圆角命名空间）",
+        "dart": null
+      },
+      "full": {
+        "tailwind": "--radius-full",
+        "css": "9999px",
+        "role": "药丸（播放悬浮按钮、弹幕开关）",
+        "dart": null
+      }
+    }
+  },
+  "shadows": {
+    "note": "原则：边框或投影，不同时用。值随主题切换，故真身在 --elevation-*，Tailwind 的 --shadow-* 只是映射（@theme inline 引用 theme 变量会自引用，故另起名）。",
+    "scale": {
+      "none": {
+        "css": "--elevation-none",
+        "tailwind": null,
+        "role": "默认（Tailwind 内置静态 shadow-none）",
+        "light": "none",
+        "dark": "none"
+      },
+      "xs": {
+        "css": "--elevation-xs",
+        "tailwind": "--shadow-xs",
+        "role": "卡片 hover",
+        "light": "0 1px 2px oklch(0.16 0.01 60 / 0.06)",
+        "dark": "0 1px 2px oklch(0 0 0 / 0.32)"
+      },
+      "sm": {
+        "css": "--elevation-sm",
+        "tailwind": "--shadow-sm",
+        "role": "悬浮卡片、下拉",
+        "light": "0 2px 5px oklch(0.16 0.01 60 / 0.08)",
+        "dark": "0 2px 5px oklch(0 0 0 / 0.40)"
+      },
+      "md": {
+        "css": "--elevation-md",
+        "tailwind": "--shadow-md",
+        "role": "Dialog、Sheet",
+        "light": "0 8px 24px oklch(0.16 0.01 60 / 0.12)",
+        "dark": "0 8px 24px oklch(0 0 0 / 0.52)"
+      },
+      "lg": {
+        "css": "--elevation-lg",
+        "tailwind": "--shadow-lg",
+        "role": "模态、Toast",
+        "light": "0 24px 64px oklch(0.16 0.01 60 / 0.20)",
+        "dark": "0 24px 64px oklch(0 0 0 / 0.62)"
+      },
+      "glow": {
+        "css": "--elevation-glow",
+        "tailwind": "--shadow-glow",
+        "role": "播放页强调控件焦点（仅深色）",
+        "light": "none",
+        "dark": "0 0 0 3px oklch(0.700 0.178 28 / 0.28)"
+      }
+    }
+  },
+  "motion": {
+    "durations": {
+      "instant": {
+        "css": "--duration-instant",
+        "ms": 50,
+        "easing": "ease-out",
+        "role": "按下态",
+        "tailwind": "duration-50",
+        "dart": "instant"
+      },
+      "fast": {
+        "css": "--duration-fast",
+        "ms": 100,
+        "easing": "ease-out",
+        "role": "hover、chip",
+        "tailwind": "duration-100",
+        "dart": "fast"
+      },
+      "base": {
+        "css": "--duration-base",
+        "ms": 150,
+        "easing": "ease-standard",
+        "role": "Sheet、Tooltip",
+        "tailwind": "duration-150",
+        "dart": "base"
+      },
+      "slow": {
+        "css": "--duration-slow",
+        "ms": 250,
+        "easing": "ease-standard",
+        "role": "Dialog",
+        "tailwind": "duration-250",
+        "dart": "slow"
+      },
+      "player": {
+        "css": "--duration-player",
+        "ms": 200,
+        "easing": "ease-out",
+        "role": "播放器控制条显隐",
+        "tailwind": "duration-200",
+        "dart": "player"
+      }
+    },
+    "easings": {
+      "ease-out": {
+        "css": "--ease-out",
+        "value": "ease-out",
+        "role": "CSS 关键字（Tailwind ease-out）",
+        "dart": null
+      },
+      "ease-standard": {
+        "css": "--ease-standard",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "role": "标准进出",
+        "dart": "ease"
+      },
+      "ease-out-expo": {
+        "css": "--ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "tailwind": "--ease-out-expo",
+        "role": "弹幕入场",
+        "dart": "easeOutExpo"
+      },
+      "ease-spring": {
+        "css": "--ease-spring",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "tailwind": "--ease-spring",
+        "role": "播放按钮出现",
+        "dart": "easeSpring"
+      }
+    },
+    "reducedMotion": {
+      "mediaQuery": "(prefers-reduced-motion: reduce)",
+      "duration": "0.01ms",
+      "iterationCount": 1,
+      "scrollBehavior": "auto",
+      "dart": "MediaQuery.disableAnimationsOf(context)",
+      "role": "全局降级；弹幕层额外改为静态堆叠（不滚动）"
+    }
+  },
+  "zIndex": {
+    "note": "单一来源，禁止魔法数字；数值刻意与 Tailwind 的裸数字档（z-10/20/30/40/50/60）对齐，故 z-50 与 --z-dialog 同值。--z-drag 已由 §3.7 的 9999 收敛为 90（守卫禁止 ≥1000）。",
+    "scale": {
+      "base": {
+        "css": "--z-base",
+        "value": 0,
+        "role": "常规流",
+        "utility": "z-base"
+      },
+      "raised": {
+        "css": "--z-raised",
+        "value": 10,
+        "role": "悬浮按钮、hover 预览",
+        "utility": "z-raised"
+      },
+      "sticky": {
+        "css": "--z-sticky",
+        "value": 20,
+        "role": "粘性表头、播放页标题条",
+        "utility": "z-sticky"
+      },
+      "sidebar": {
+        "css": "--z-sidebar",
+        "value": 30,
+        "role": "侧栏、折叠抽屉",
+        "utility": "z-sidebar"
+      },
+      "overlay": {
+        "css": "--z-overlay",
+        "value": 40,
+        "role": "遮罩",
+        "utility": "z-overlay"
+      },
+      "dialog": {
+        "css": "--z-dialog",
+        "value": 50,
+        "role": "Dialog、Sheet、Dropdown、Tooltip（与 Radix 默认 50 一致）",
+        "utility": "z-dialog"
+      },
+      "toast": {
+        "css": "--z-toast",
+        "value": 60,
+        "role": "Sonner",
+        "utility": "z-toast"
+      },
+      "player-ctl": {
+        "css": "--z-player-ctl",
+        "value": 30,
+        "role": "播放器控制条（在 --stage 内部，不与全局叠加）",
+        "utility": "z-player-ctl"
+      },
+      "danmaku": {
+        "css": "--z-danmaku",
+        "value": 20,
+        "role": "弹幕层（控制条之下、画面之上）",
+        "utility": "z-danmaku"
+      },
+      "drag": {
+        "css": "--z-drag",
+        "value": 90,
+        "role": "Electron -webkit-app-region: drag 提示层（最高层）",
+        "utility": "z-drag"
+      }
+    },
+    "maxAllowed": 999
+  },
+  "contrast": {
+    "pairs": [
+      {
+        "usage": "正文/标题在画布上",
+        "theme": "light",
+        "fg": "foreground",
+        "bg": "background",
+        "min": 4.5,
+        "ratio": 14.72,
+        "pass": true
+      },
+      {
+        "usage": "正文/标题在画布上",
+        "theme": "dark",
+        "fg": "foreground",
+        "bg": "background",
+        "min": 4.5,
+        "ratio": 16.03,
+        "pass": true
+      },
+      {
+        "usage": "卡片标题",
+        "theme": "light",
+        "fg": "foreground",
+        "bg": "card",
+        "min": 4.5,
+        "ratio": 15.36,
+        "pass": true
+      },
+      {
+        "usage": "卡片标题",
+        "theme": "dark",
+        "fg": "foreground",
+        "bg": "card",
+        "min": 4.5,
+        "ratio": 14.41,
+        "pass": true
+      },
+      {
+        "usage": "次要文字",
+        "theme": "light",
+        "fg": "foreground-muted",
+        "bg": "background",
+        "min": 4.5,
+        "ratio": 5.5,
+        "pass": true
+      },
+      {
+        "usage": "次要文字",
+        "theme": "dark",
+        "fg": "foreground-muted",
+        "bg": "background",
+        "min": 4.5,
+        "ratio": 7.66,
+        "pass": true
+      },
+      {
+        "usage": "三级文字/占位",
+        "theme": "light",
+        "fg": "foreground-subtle",
+        "bg": "background",
+        "min": 4.5,
+        "ratio": 4.52,
+        "pass": true
+      },
+      {
+        "usage": "三级文字/占位",
+        "theme": "dark",
+        "fg": "foreground-subtle",
+        "bg": "background",
+        "min": 4.5,
+        "ratio": 10.36,
+        "pass": true
+      },
+      {
+        "usage": "侧栏文字在次级面上",
+        "theme": "light",
+        "fg": "foreground-muted",
+        "bg": "surface",
+        "min": 4.5,
+        "ratio": 4.95,
+        "pass": true
+      },
+      {
+        "usage": "侧栏文字在次级面上",
+        "theme": "dark",
+        "fg": "foreground-muted",
+        "bg": "surface",
+        "min": 4.5,
+        "ratio": 6.11,
+        "pass": true
+      },
+      {
+        "usage": "主按钮填充上的字",
+        "theme": "light",
+        "fg": "primary-foreground",
+        "bg": "primary",
+        "min": 4.5,
+        "ratio": 4.91,
+        "pass": true
+      },
+      {
+        "usage": "主按钮填充上的字",
+        "theme": "dark",
+        "fg": "primary-foreground",
+        "bg": "primary",
+        "min": 4.5,
+        "ratio": 6.69,
+        "pass": true
+      },
+      {
+        "usage": "选中底上的字",
+        "theme": "light",
+        "fg": "primary-foreground-soft",
+        "bg": "primary-subtle",
+        "min": 4.5,
+        "ratio": 6.18,
+        "pass": true
+      },
+      {
+        "usage": "选中底上的字",
+        "theme": "dark",
+        "fg": "primary-foreground-soft",
+        "bg": "primary-subtle",
+        "min": 4.5,
+        "ratio": 6.36,
+        "pass": true
+      },
+      {
+        "usage": "侧栏选中项",
+        "theme": "light",
+        "fg": "sidebar-primary-foreground",
+        "bg": "sidebar-primary",
+        "min": 4.5,
+        "ratio": 6.18,
+        "pass": true
+      },
+      {
+        "usage": "侧栏选中项",
+        "theme": "dark",
+        "fg": "sidebar-primary-foreground",
+        "bg": "sidebar-primary",
+        "min": 4.5,
+        "ratio": 6.36,
+        "pass": true
+      },
+      {
+        "usage": "危险按钮",
+        "theme": "light",
+        "fg": "destructive-foreground",
+        "bg": "destructive",
+        "min": 4.5,
+        "ratio": 5.53,
+        "pass": true
+      },
+      {
+        "usage": "危险按钮",
+        "theme": "dark",
+        "fg": "destructive-foreground",
+        "bg": "destructive",
+        "min": 4.5,
+        "ratio": 9.45,
+        "pass": true
+      },
+      {
+        "usage": "警告徽标",
+        "theme": "light",
+        "fg": "warning-foreground",
+        "bg": "warning",
+        "min": 4.5,
+        "ratio": 4.59,
+        "pass": true
+      },
+      {
+        "usage": "警告徽标",
+        "theme": "dark",
+        "fg": "warning-foreground",
+        "bg": "warning",
+        "min": 4.5,
+        "ratio": 8.97,
+        "pass": true
+      },
+      {
+        "usage": "已完成/已下载",
+        "theme": "light",
+        "fg": "success-foreground",
+        "bg": "success",
+        "min": 4.5,
+        "ratio": 5.31,
+        "pass": true
+      },
+      {
+        "usage": "已完成/已下载",
+        "theme": "dark",
+        "fg": "success-foreground",
+        "bg": "success",
+        "min": 4.5,
+        "ratio": 9.81,
+        "pass": true
+      },
+      {
+        "usage": "品牌红作为强调/图标（非文字 3:1）",
+        "theme": "light",
+        "fg": "primary",
+        "bg": "background",
+        "min": 3.0,
+        "ratio": 4.92,
+        "pass": true
+      },
+      {
+        "usage": "品牌红作为强调/图标（非文字 3:1）",
+        "theme": "dark",
+        "fg": "primary",
+        "bg": "background",
+        "min": 3.0,
+        "ratio": 6.47,
+        "pass": true
+      },
+      {
+        "usage": "卡片上的强调控件",
+        "theme": "light",
+        "fg": "primary",
+        "bg": "card",
+        "min": 3.0,
+        "ratio": 5.14,
+        "pass": true
+      },
+      {
+        "usage": "卡片上的强调控件",
+        "theme": "dark",
+        "fg": "primary",
+        "bg": "card",
+        "min": 3.0,
+        "ratio": 5.82,
+        "pass": true
+      },
+      {
+        "usage": "焦点环可见性",
+        "theme": "light",
+        "fg": "ring",
+        "bg": "background",
+        "min": 3.0,
+        "ratio": 4.92,
+        "pass": true
+      },
+      {
+        "usage": "焦点环可见性",
+        "theme": "dark",
+        "fg": "ring",
+        "bg": "background",
+        "min": 3.0,
+        "ratio": 6.47,
+        "pass": true
+      },
+      {
+        "usage": "卡片内焦点环",
+        "theme": "light",
+        "fg": "ring",
+        "bg": "card",
+        "min": 3.0,
+        "ratio": 5.14,
+        "pass": true
+      },
+      {
+        "usage": "卡片内焦点环",
+        "theme": "dark",
+        "fg": "ring",
+        "bg": "card",
+        "min": 3.0,
+        "ratio": 5.82,
+        "pass": true
+      },
+      {
+        "usage": "VIP 徽标",
+        "theme": "light",
+        "fg": "gold",
+        "bg": "background",
+        "min": 3.0,
+        "ratio": 2.1,
+        "pass": false
+      },
+      {
+        "usage": "VIP 徽标",
+        "theme": "dark",
+        "fg": "gold",
+        "bg": "background",
+        "min": 3.0,
+        "ratio": 11.96,
+        "pass": true
+      },
+      {
+        "usage": "弹幕文字在播放台上（含 0.92 alpha 合成）",
+        "theme": "light",
+        "fg": "danmaku",
+        "bg": "stage",
+        "min": 4.5,
+        "ratio": 15.75,
+        "pass": true,
+        "alpha": 0.92
+      },
+      {
+        "usage": "弹幕文字在播放台上（含 0.92 alpha 合成）",
+        "theme": "dark",
+        "fg": "danmaku",
+        "bg": "stage",
+        "min": 4.5,
+        "ratio": 15.75,
+        "pass": true,
+        "alpha": 0.92
+      }
+    ],
+    "knownGaps": [
+      {
+        "fg": "gold",
+        "bg": "background",
+        "theme": "light",
+        "min": 3.0,
+        "ratio": 2.1,
+        "status": "open",
+        "reason": "浅色下 --gold 只作 VIP 徽标底色/装饰，不承担信息传达；禁止在浅色底上用 --gold 作正文或图标唯一指示（深色下 11.96 达标）。若要让浅色也可读，需新增 --gold-foreground 与更深的 gold 档（超出本次令牌范围）"
+      }
+    ]
+  },
+  "mirror": {
+    "dart": {
+      "target": "apps/android/lib/ui/tokens.dart",
+      "mode": "compare-only：真源只校验该文件，绝不覆盖；差异写入报告",
+      "class": "HongguoTokens",
+      "unmirrored": [
+        {
+          "path": "spacing.scale.0.5 / 1.5 / 2.5",
+          "px": "2 / 6 / 10",
+          "reason": "M4b 的 HnSpacing 只镜像了 9 档（step1…step12），§3.3 的 2/6/10px 三档缺失"
+        },
+        {
+          "path": "radius.scale.4xl / full",
+          "px": "24 / 9999",
+          "reason": "本次为闭合 Tailwind 圆角命名空间新增；Flutter 侧未镜像（药丸形用 BoxShape/StadiumBorder）"
+        },
+        {
+          "path": "spacing.layout.*",
+          "reason": "§6.1 已定：布局常量是 PC 端形态专属，Dart 侧只定义尺度"
+        },
+        {
+          "path": "zIndex.*",
+          "reason": "§3.7：Flutter 无 z-index，由 Stack 子序与 Overlay 入队序表达"
+        },
+        {
+          "path": "motion.easings.ease-out",
+          "reason": "CSS 关键字；Dart 侧由 Curves.easeOut 表达，无需常量"
+        },
+        {
+          "path": "shadows.*",
+          "reason": "§6.1 未要求镜像：Flutter 用 Material elevation，投影由 M3 承载"
+        }
+      ]
+    }
+  },
+  "guard": {
+    "componentColorNames": [
+      "background",
+      "foreground",
+      "card",
+      "card-foreground",
+      "popover",
+      "popover-foreground",
+      "primary",
+      "primary-foreground",
+      "primary-hover",
+      "primary-subtle",
+      "primary-foreground-soft",
+      "secondary",
+      "secondary-foreground",
+      "muted",
+      "muted-foreground",
+      "accent",
+      "accent-foreground",
+      "destructive",
+      "destructive-foreground",
+      "border",
+      "border-subtle",
+      "input",
+      "ring",
+      "sidebar",
+      "sidebar-foreground",
+      "sidebar-primary",
+      "sidebar-primary-foreground",
+      "sidebar-accent",
+      "sidebar-accent-foreground",
+      "sidebar-border",
+      "sidebar-ring",
+      "surface",
+      "surface-hover",
+      "foreground-muted",
+      "foreground-subtle",
+      "skeleton",
+      "scrim",
+      "stage",
+      "danmaku",
+      "scroll-thumb",
+      "gold",
+      "warning",
+      "warning-foreground",
+      "success",
+      "success-foreground"
+    ],
+    "literalScope": {
+      "error": [
+        "apps/desktop/src/styles/**/*.css",
+        "apps/android/lib/ui/**/*.dart"
+      ],
+      "errorExclude": [
+        "apps/desktop/src/styles/tokens.css",
+        "apps/android/lib/ui/tokens.dart"
+      ],
+      "warn": [
+        "apps/desktop/src/renderer/**/*.ts",
+        "apps/desktop/src/renderer/**/*.tsx"
+      ],
+      "warnNote": "渲染层同时由 apps/desktop/scripts/guard-tokens.mjs（另一位工程师）判定为失败级；本守卫先旁路报告（--strict-literals 可升级为失败），避免两个守卫对同一文件的结论不一致"
+    },
+    "legacyScanExtensions": [
+      ".css",
+      ".scss",
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".dart",
+      ".html"
+    ],
+    "legacyScanRoots": [
+      "apps",
+      "tools",
+      "bridge",
+      "core"
+    ],
+    "zIndexMax": 999,
+    "scanSkipDirs": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build",
+      ".vite",
+      "legacy",
+      "refs",
+      "docs"
+    ]
+  },
+  "legacyNames": {
+    "reusedNames": {
+      "--border": {
+        "oldMeaning": "#e4e1dc",
+        "newToken": "--border",
+        "warning": "同名义同（新令牌沿用了这个名字）"
+      },
+      "--primary": {
+        "oldMeaning": "#c8383d",
+        "newToken": "--primary",
+        "warning": "同名义同（新令牌沿用了这个名字）"
+      },
+      "--accent": {
+        "oldMeaning": "#c8383d",
+        "newToken": "--primary",
+        "warning": "老 --accent 是「品牌红 #c8383d」，新 --accent 是「hover/焦点面」；两者同名叫法不同义，搬老代码时必须改判"
+      },
+      "--scrim": {
+        "oldMeaning": "#29231b40",
+        "newToken": "--scrim",
+        "warning": "同名义同（新令牌沿用了这个名字）"
+      },
+      "--skeleton": {
+        "oldMeaning": "#eeebe6",
+        "newToken": "--skeleton",
+        "warning": "同名义同（新令牌沿用了这个名字）"
+      }
+    },
+    "denied": {
+      "--bg": "--background",
+      "--bg-canvas": "--background",
+      "--bg-primary": "--background",
+      "--card-bg": "--card",
+      "--bg-subtle": "--card",
+      "--bg-elevated": "--card",
+      "--bg-inset": "--muted",
+      "--sidebar-bg": "--sidebar",
+      "--bg-hover": "--accent",
+      "--text": "--foreground",
+      "--text-primary": "--foreground",
+      "--text-secondary": "--muted-foreground",
+      "--text-sub": "--muted-foreground",
+      "--text-tertiary": "--foreground-subtle",
+      "--border-default": "--border",
+      "--border-color": "--border",
+      "--border-muted": "--border-subtle",
+      "--border-strong": "--input",
+      "--accent-soft": "--primary-subtle",
+      "--sidebar-active": "--primary-subtle",
+      "--accent-text": "--primary-foreground-soft",
+      "--focus-ring": "--ring",
+      "--focus-soft": "--ring",
+      "--brand": "--primary",
+      "--text2": "--foreground-muted",
+      "--text3": "--foreground-subtle",
+      "--grad": "（无：本仓不使用渐变背景，改 --primary-subtle）"
+    },
+    "allowFiles": [
+      "legacy/**",
+      "refs/**",
+      "docs/**",
+      "**/*.md",
+      "apps/android/lib/**/legacy/**"
+    ]
+  },
+  "corrections": [
+    {
+      "token": "colors.surface-hover.light",
+      "docOklch": "oklch(0.938 0.006 80)",
+      "jsonOklch": "oklch(0.92891 0.00746 80.72)",
+      "docHex": "#eae7e2",
+      "docComputedHex": "#edeae6",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.surface-hover.dark",
+      "docOklch": "oklch(0.320 0.006 265)",
+      "jsonOklch": "oklch(0.32894 0.00922 268.38)",
+      "docHex": "#33353a",
+      "docComputedHex": "#313336",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.primary-foreground-soft.light",
+      "docOklch": "oklch(0.470 0.170 27)",
+      "jsonOklch": "oklch(0.47399 0.15502 26.92)",
+      "docHex": "#a12b27",
+      "docComputedHex": "#a51f1e",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.primary-foreground-soft.dark",
+      "docOklch": "oklch(0.800 0.110 25)",
+      "jsonOklch": "oklch(0.79598 0.09756 25.68)",
+      "docHex": "#f5a49c",
+      "docComputedHex": "#fda19a",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.accent.light",
+      "docOklch": "oklch(0.938 0.006 80)",
+      "jsonOklch": "oklch(0.92891 0.00746 80.72)",
+      "docHex": "#eae7e2",
+      "docComputedHex": "#edeae6",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.accent.dark",
+      "docOklch": "oklch(0.320 0.006 265)",
+      "jsonOklch": "oklch(0.32894 0.00922 268.38)",
+      "docHex": "#33353a",
+      "docComputedHex": "#313336",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.border-subtle.light",
+      "docOklch": "oklch(0.945 0.006 81)",
+      "jsonOklch": "oklch(0.941 0.00744 80.72)",
+      "docHex": "#eeebe6",
+      "docComputedHex": "#efece8",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.border-subtle.dark",
+      "docOklch": "oklch(0.310 0.010 85)",
+      "jsonOklch": "oklch(0.34099 0.00898 88.74)",
+      "docHex": "#3a3833",
+      "docComputedHex": "#33302b",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.input.light",
+      "docOklch": "oklch(0.850 0.008 81)",
+      "jsonOklch": "oklch(0.83401 0.01061 81.79)",
+      "docHex": "#ccc8c1",
+      "docComputedHex": "#d0cdc8",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.input.dark",
+      "docOklch": "oklch(0.470 0.012 85)",
+      "jsonOklch": "oklch(0.51682 0.01448 75.26)",
+      "docHex": "#6d675f",
+      "docComputedHex": "#5e5a53",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.sidebar-primary-foreground.light",
+      "docOklch": "oklch(0.470 0.170 27)",
+      "jsonOklch": "oklch(0.47399 0.15502 26.92)",
+      "docHex": "#a12b27",
+      "docComputedHex": "#a51f1e",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.sidebar-primary-foreground.dark",
+      "docOklch": "oklch(0.800 0.110 25)",
+      "jsonOklch": "oklch(0.79598 0.09756 25.68)",
+      "docHex": "#f5a49c",
+      "docComputedHex": "#fda19a",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.skeleton.light",
+      "docOklch": "oklch(0.930 0.006 81)",
+      "jsonOklch": "oklch(0.92284 0.00747 80.72)",
+      "docHex": "#e8e5e0",
+      "docComputedHex": "#eae7e3",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.skeleton.dark",
+      "docOklch": "oklch(0.280 0.008 265)",
+      "jsonOklch": "oklch(0.30476 0.00771 264.45)",
+      "docHex": "#2d2f33",
+      "docComputedHex": "#27292d",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.scroll-thumb.light",
+      "docOklch": "oklch(0.780 0.008 81)",
+      "jsonOklch": "oklch(0.81529 0.01067 81.79)",
+      "docHex": "#c6c2bb",
+      "docComputedHex": "#bab7b2",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.scroll-thumb.dark",
+      "docOklch": "oklch(0.470 0.012 85)",
+      "jsonOklch": "oklch(0.51682 0.01448 75.26)",
+      "docHex": "#6d675f",
+      "docComputedHex": "#5e5a53",
+      "reason": "§3.1 的 OKLCH 列与 HEX 列不自洽；HEX 为跨端规范值（Flutter 只能表达 HEX），故按 HEX 反算 OKLCH，使 PC 与 Android 渲染同一颜色"
+    },
+    {
+      "token": "colors.primary-foreground-soft.tailwind",
+      "docValue": "—（§3.1 未给 Tailwind 别名）",
+      "jsonValue": "--color-primary-foreground-soft",
+      "reason": "这两个名字是 shadcn 语义名规范的一部分（sidebar.tsx 直接使用 text-sidebar-primary-foreground）；留空会让对应工具类拿不到值"
+    },
+    {
+      "token": "colors.sidebar-primary-foreground.tailwind",
+      "docValue": "—（§3.1 未给 Tailwind 别名）",
+      "jsonValue": "--color-sidebar-primary-foreground",
+      "reason": "这两个名字是 shadcn 语义名规范的一部分（sidebar.tsx 直接使用 text-sidebar-primary-foreground）；留空会让对应工具类拿不到值"
+    },
+    {
+      "token": "zIndex.scale.drag.value",
+      "docValue": 9999,
+      "jsonValue": 90,
+      "reason": "CI 护栏禁止 z-index ≥ 1000（防止 z-index 军备竞赛）；drag 提示层只需高于 toast(60)"
+    }
+  ]
+}

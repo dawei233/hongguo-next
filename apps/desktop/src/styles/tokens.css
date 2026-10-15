@@ -1,0 +1,352 @@
+/* ============================================================================
+ * hongguo-next 设计令牌 —— 由 tools/gen_tokens.py 从 docs/design-tokens.json 生成。
+ * 请勿手改本文件：改真源后运行 `python3 tools/gen_tokens.py`。
+ * 守卫：`python3 tools/check_tokens.py`（CI 必跑）；设计说明见 docs/DESIGN-SYSTEM.md §2/§3。
+ *
+ * 结构：
+ *   1. :root / .dark / [data-always-dark]  令牌真身（CSS 变量，浅色为默认）
+ *   2. @theme         字体栈 / --text-* 字号 / --spacing / --ease-*（Tailwind 命名空间）
+ *   3. @theme inline  shadcn 语义名 → 令牌真身（--color-* / --radius-* / --shadow-*）
+ *   4. @utility       z-index 与时长的令牌化工具类（避免 z-[9999] 这类任意值）
+ *   5. reduced motion 全局降级（§3.6）
+ *
+ * 归属边界：globals.css（渲染层入口）负责 `@import "tailwindcss"`、
+ * `@custom-variant dark (&:is(.dark *))` 与 base 层（body 用 var(--font-sans)/var(--text-base)）。
+ * 颜色权威值：HEX —— 跨端无损（Flutter 侧 Color(int) 无法表达 oklch）；
+ * oklch 是本文件的 CSS 表达，守卫会断言它能逐值往返到同一 HEX。
+ * ============================================================================ */
+
+:root {
+  /* color-scheme 让原生滚动条/表单控件跟随主题（§2.4） */
+  color-scheme: light;
+
+  /* ── §3.1 颜色 · 浅色 ───────────────────────────────────────────── */
+  --background: oklch(0.985 0.003 85);                         /* #fbfaf8 · 应用画布 */
+  --card: oklch(1 0 0);                                        /* #ffffff · 卡片/面板 */
+  --popover: oklch(1 0 0);                                     /* #ffffff · 浮层 */
+  --surface: oklch(0.950 0.005 78);                            /* #f0eeeb · 次级面（侧栏、inset） */
+  --surface-hover: oklch(0.92891 0.00746 80.72);               /* #eae7e2 · 行 hover */
+  --foreground: oklch(0.264 0.004 107);                        /* #252523 · 主文字 */
+  --foreground-muted: oklch(0.510 0.008 89);                   /* #686661 · 次要文字 */
+  --foreground-subtle: oklch(0.557 0.012 82);                  /* #77736c · 三级文字/占位 */
+  --primary: oklch(0.558 0.181 27);                            /* #c83933 · 品牌红/主要动作 */
+  --primary-hover: oklch(0.498 0.170 27);                      /* #af2a27 · —— */
+  --primary-foreground: oklch(0.985 0.005 27);                 /* #fdf9f8 · 品牌底上的字 */
+  --primary-subtle: oklch(0.947 0.019 26);                     /* #fae9e7 · 选中底/弱强调面 */
+  --primary-foreground-soft: oklch(0.47399 0.15502 26.92);     /* #a12b27 · 弱强调面上的字 */
+  --secondary: oklch(0.950 0.005 78);                          /* #f0eeeb · 次级填充按钮 */
+  --secondary-foreground: oklch(0.264 0.004 107);              /* #252523 · —— */
+  --muted: oklch(0.950 0.005 78);                              /* #f0eeeb · 弱面 */
+  --muted-foreground: oklch(0.510 0.008 89);                   /* #686661 · —— */
+  --accent: oklch(0.92891 0.00746 80.72);                      /* #eae7e2 · hover/焦点面 */
+  --accent-foreground: oklch(0.264 0.004 107);                 /* #252523 · —— */
+  --destructive: oklch(0.530 0.171 24);                        /* #ba3437 · 危险/错误 */
+  --destructive-foreground: oklch(0.985 0.005 27);             /* #fdf9f8 · —— */
+  --warning: oklch(0.558 0.107 72);                            /* #9a681e · 警告 */
+  --warning-foreground: oklch(0.985 0.010 79);                 /* #fef9f3 · —— */
+  --success: oklch(0.509 0.078 167);                           /* #32745c · 已下载/已完成 */
+  --success-foreground: oklch(0.985 0.005 167);                /* #f7fbf9 · —— */
+  --gold: oklch(0.760 0.130 75);                               /* #e1a447 · VIP/会员（承接 guoapp tertiary） */
+  --border: oklch(0.911 0.008 81);                             /* #e4e1dc · 卡片边框 */
+  --border-subtle: oklch(0.941 0.00744 80.72);                 /* #eeebe6 · 分隔线 */
+  --input: oklch(0.83401 0.01061 81.79);                       /* #ccc8c1 · 输入框边框 */
+  --ring: oklch(0.558 0.181 27);                               /* #c83933 · 焦点环 */
+  --sidebar: oklch(0.950 0.005 78);                            /* #f0eeeb · 侧栏 */
+  --sidebar-foreground: oklch(0.510 0.008 89);                 /* #686661 · 侧栏文字 */
+  --sidebar-primary: oklch(0.947 0.019 26);                    /* #fae9e7 · 侧栏选中底 */
+  --sidebar-primary-foreground: oklch(0.47399 0.15502 26.92);  /* #a12b27 · 侧栏选中字 */
+  --sidebar-border: oklch(0.911 0.008 81);                     /* #e4e1dc · —— */
+  --skeleton: oklch(0.92284 0.00747 80.72);                    /* #e8e5e0 · 骨架屏 */
+  --scrim: oklch(0.300 0.020 60 / 0.45);                       /* #362c24 · alpha 0.45 · 模态遮罩 */
+  --scroll-thumb: oklch(0.81529 0.01067 81.79);                /* #c6c2bb · 滚动条 */
+
+  /* ── §3.1 恒定暗色区：双主题同值，不参与 .dark（§6.3） ──────────── */
+  --stage: oklch(0.145 0.004 265);          /* #090a0c · 恒定（播放台上） */
+  --danmaku: oklch(0.980 0.010 90 / 0.92);  /* #fbf8f1 · alpha 0.92 · 恒定（播放台上） */
+
+  /* ── §3.3 布局常量（断点相关，故不进 spacing 阶梯） ─────────────── */
+  --sidebar-w: 214px;           /* 侧栏展开宽 */
+  --sidebar-w-collapsed: 64px;  /* 侧栏图标态宽 */
+  --toolbar-h: 48px;            /* 顶部工具条高（macOS 左上预留 78px 给红绿灯） */
+  --content-max: 1180px;        /* 内容最大宽 */
+  --settings-max: 840px;        /* 设置页最大宽 */
+  --poster-min: 150px;          /* 海报网格最小列宽 */
+  --stage-max: 1080px;          /* 播放器画面最大宽 */
+
+  /* ── §3.4 圆角基准（派生档见 @theme inline，单一基准派生） ──────── */
+  --radius: 0.625rem;  /* 卡片 */
+
+  /* ── §3.5 阴影真身（值随主题切换；--shadow-* 是同值的 Tailwind 映射名） ── */
+  --elevation-none: none;                                  /* 默认（Tailwind 内置静态 shadow-none） */
+  --elevation-xs: 0 1px 2px oklch(0.16 0.01 60 / 0.06);    /* 卡片 hover */
+  --elevation-sm: 0 2px 5px oklch(0.16 0.01 60 / 0.08);    /* 悬浮卡片、下拉 */
+  --elevation-md: 0 8px 24px oklch(0.16 0.01 60 / 0.12);   /* Dialog、Sheet */
+  --elevation-lg: 0 24px 64px oklch(0.16 0.01 60 / 0.20);  /* 模态、Toast */
+  --elevation-glow: none;                                  /* 播放页强调控件焦点（仅深色） */
+
+  /* ── §3.6 动效时长（缓动见 @theme；background: 见 §3.6 的 reduced motion） ── */
+  --duration-instant: 50ms;  /* 按下态（ease-out） */
+  --duration-fast: 100ms;    /* hover、chip（ease-out） */
+  --duration-base: 150ms;    /* Sheet、Tooltip（ease-standard） */
+  --duration-slow: 250ms;    /* Dialog（ease-standard） */
+  --duration-player: 200ms;  /* 播放器控制条显隐（ease-out） */
+
+  /* ── §3.7 z-index：单一来源，禁止魔法数字；与 Tailwind 裸数字档同值 ── */
+  --z-base: 0;         /* 常规流 */
+  --z-raised: 10;      /* 悬浮按钮、hover 预览 */
+  --z-sticky: 20;      /* 粘性表头、播放页标题条 */
+  --z-sidebar: 30;     /* 侧栏、折叠抽屉 */
+  --z-overlay: 40;     /* 遮罩 */
+  --z-dialog: 50;      /* Dialog、Sheet、Dropdown、Tooltip（与 Radix 默认 50 一致） */
+  --z-toast: 60;       /* Sonner */
+  --z-player-ctl: 30;  /* 播放器控制条（在 --stage 内部，不与全局叠加） */
+  --z-danmaku: 20;     /* 弹幕层（控制条之下、画面之上） */
+  --z-drag: 90;        /* Electron -webkit-app-region: drag 提示层（最高层） */
+}
+
+.dark,
+[data-always-dark] {
+  /* class 策略（§2.4）：storage key `hn-theme`，默认 dark。
+   * [data-always-dark] 是播放器页覆盖全局偏好的挂点（§2.4），与 .dark 同值、同一次推导。 */
+  color-scheme: dark;
+
+  /* ── §3.1 颜色 · 深色 ───────────────────────────────────────────── */
+  --background: oklch(0.180 0.004 265);                        /* #111213 · 应用画布 */
+  --card: oklch(0.232 0.005 265);                              /* #1c1d20 · 卡片/面板 */
+  --popover: oklch(0.232 0.005 265);                           /* #1c1d20 · 浮层 */
+  --surface: oklch(0.272 0.005 265);                           /* #262729 · 次级面（侧栏、inset） */
+  --surface-hover: oklch(0.32894 0.00922 268.38);              /* #33353a · 行 hover */
+  --foreground: oklch(0.946 0.007 89);                         /* #efede8 · 主文字 */
+  --foreground-muted: oklch(0.724 0.013 80);                   /* #aaa59d · 次要文字 */
+  --foreground-subtle: oklch(0.810 0.012 80);                  /* #c5c0b8 · 三级文字/占位 */
+  --primary: oklch(0.700 0.178 28);                            /* #f96a5d · 品牌红/主要动作 */
+  --primary-hover: oklch(0.756 0.162 30);                      /* #ff8370 · —— */
+  --primary-foreground: oklch(0.165 0.035 27);                 /* #1b0806 · 品牌底上的字 */
+  --primary-subtle: oklch(0.330 0.062 27);                     /* #512824 · 选中底/弱强调面 */
+  --primary-foreground-soft: oklch(0.79598 0.09756 25.68);     /* #f5a49c · 弱强调面上的字 */
+  --secondary: oklch(0.272 0.005 265);                         /* #262729 · 次级填充按钮 */
+  --secondary-foreground: oklch(0.946 0.007 89);               /* #efede8 · —— */
+  --muted: oklch(0.272 0.005 265);                             /* #262729 · 弱面 */
+  --muted-foreground: oklch(0.724 0.013 80);                   /* #aaa59d · —— */
+  --accent: oklch(0.32894 0.00922 268.38);                     /* #33353a · hover/焦点面 */
+  --accent-foreground: oklch(0.946 0.007 89);                  /* #efede8 · —— */
+  --destructive: oklch(0.785 0.096 19);                        /* #f0a0a1 · 危险/错误 */
+  --destructive-foreground: oklch(0.165 0.035 27);             /* #1b0806 · —— */
+  --warning: oklch(0.807 0.095 79);                            /* #e1b978 · 警告 */
+  --warning-foreground: oklch(0.240 0.060 79);                 /* #2e1b00 · —— */
+  --success: oklch(0.787 0.069 162);                           /* #92c8ac · 已下载/已完成 */
+  --success-foreground: oklch(0.180 0.040 167);                /* #00170e · —— */
+  --gold: oklch(0.855 0.123 83);                               /* #f6c86b · VIP/会员（承接 guoapp tertiary） */
+  --border: oklch(0.384 0.011 85);                             /* #46433d · 卡片边框 */
+  --border-subtle: oklch(0.34099 0.00898 88.74);               /* #3a3833 · 分隔线 */
+  --input: oklch(0.51682 0.01448 75.26);                       /* #6d675f · 输入框边框 */
+  --ring: oklch(0.700 0.178 28);                               /* #f96a5d · 焦点环 */
+  --sidebar: oklch(0.210 0.005 265);                           /* #17181b · 侧栏 */
+  --sidebar-foreground: oklch(0.810 0.012 80);                 /* #c5c0b8 · 侧栏文字 */
+  --sidebar-primary: oklch(0.330 0.062 27);                    /* #512824 · 侧栏选中底 */
+  --sidebar-primary-foreground: oklch(0.79598 0.09756 25.68);  /* #f5a49c · 侧栏选中字 */
+  --sidebar-border: oklch(0.384 0.011 85);                     /* #46433d · —— */
+  --skeleton: oklch(0.30476 0.00771 264.45);                   /* #2d2f33 · 骨架屏 */
+  --scrim: oklch(0 0 0 / 0.66);                                /* #000000 · alpha 0.66 · 模态遮罩 */
+  --scroll-thumb: oklch(0.51682 0.01448 75.26);                /* #6d675f · 滚动条 */
+
+  /* ── §3.5 阴影 · 深色 ───────────────────────────────────────────── */
+  --elevation-none: none;                                    /* 默认（Tailwind 内置静态 shadow-none） */
+  --elevation-xs: 0 1px 2px oklch(0 0 0 / 0.32);             /* 卡片 hover */
+  --elevation-sm: 0 2px 5px oklch(0 0 0 / 0.40);             /* 悬浮卡片、下拉 */
+  --elevation-md: 0 8px 24px oklch(0 0 0 / 0.52);            /* Dialog、Sheet */
+  --elevation-lg: 0 24px 64px oklch(0 0 0 / 0.62);           /* 模态、Toast */
+  --elevation-glow: 0 0 0 3px oklch(0.700 0.178 28 / 0.28);  /* 播放页强调控件焦点（仅深色） */
+}
+
+@theme {
+  /* ── §3.2 字体栈：系统中文栈，不内嵌 webfont（§6.3） ─────────────── */
+  --font-sans: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;  /* 全部 UI 文字 */
+  --font-numeric: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;                                                                           /* 数字（配 tabular-nums） */
+
+  /* ── §3.3 间距基线：Tailwind 数字档 = 基线 × 档位（p-4 = 16px） ──── */
+  --spacing: 0.25rem;  /* 4px 基线 */
+
+  /* ── §3.2 字号：Tailwind 的 --text-* 命名空间（字号+行高+字距+字重） ── */
+  --text-2xs: 10px;  /* 角标、热度数字（等宽） */
+  --text-2xs--line-height: 1.4;
+  --text-2xs--letter-spacing: 0.02em;
+  --text-2xs--font-weight: 600;
+  --text-xs: 11px;  /* 集数、时长、标签 */
+  --text-xs--line-height: 1.5;
+  --text-xs--letter-spacing: 0.01em;
+  --text-xs--font-weight: 500;
+  --text-sm: 12px;  /* 辅助说明、侧栏 */
+  --text-sm--line-height: 1.5;
+  --text-sm--letter-spacing: 0;
+  --text-sm--font-weight: 500;
+  --text-base: 13px;  /* 正文基准（承接现役 13px） */
+  --text-base--line-height: 1.55;
+  --text-base--letter-spacing: 0;
+  --text-base--font-weight: 400;
+  --text-md: 15px;  /* 卡片标题、剧名 */
+  --text-md--line-height: 1.5;
+  --text-md--letter-spacing: -0.01em;
+  --text-md--font-weight: 600;
+  --text-lg: 17px;  /* 区块标题 */
+  --text-lg--line-height: 1.4;
+  --text-lg--letter-spacing: -0.015em;
+  --text-lg--font-weight: 600;
+  --text-xl: 20px;  /* 页面副标题 */
+  --text-xl--line-height: 1.35;
+  --text-xl--letter-spacing: -0.02em;
+  --text-xl--font-weight: 700;
+  --text-2xl: 26px;  /* 页面主标题 */
+  --text-2xl--line-height: 1.25;
+  --text-2xl--letter-spacing: -0.025em;
+  --text-2xl--font-weight: 700;
+  --text-3xl: 32px;  /* 详情页剧名（Android 端 24px） */
+  --text-3xl--line-height: 1.2;
+  --text-3xl--letter-spacing: -0.03em;
+  --text-3xl--font-weight: 700;
+  --text-display: 44px;  /* 播放器标题、启动页 */
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 800;
+
+  /* ── §3.6 缓动：Tailwind 的 --ease-* 命名空间（ease-out 用内置） ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);    /* 弹幕入场 */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);  /* 播放按钮出现 */
+}
+
+@theme inline {
+  /* ── §3.1 颜色：shadcn 语义名 → 令牌真身（浅/深由 :root/.dark 决定） ──
+   * inline 让工具类直接内联 `var(--token)`（bg-background → var(--background)），
+   * 因此主题切换只需覆盖 :root/.dark 的令牌真身，无需重新生成工具类。 */
+  --color-background: var(--background);                                  /* 应用画布 */
+  --color-card: var(--card);                                              /* 卡片/面板 */
+  --color-popover: var(--popover);                                        /* 浮层 */
+  --color-surface: var(--surface);                                        /* 次级面（侧栏、inset） */
+  --color-surface-hover: var(--surface-hover);                            /* 行 hover */
+  --color-foreground: var(--foreground);                                  /* 主文字 */
+  --color-foreground-muted: var(--foreground-muted);                      /* 次要文字 */
+  --color-foreground-subtle: var(--foreground-subtle);                    /* 三级文字/占位 */
+  --color-primary: var(--primary);                                        /* 品牌红/主要动作 */
+  --color-primary-hover: var(--primary-hover);                            /* —— */
+  --color-primary-foreground: var(--primary-foreground);                  /* 品牌底上的字 */
+  --color-primary-subtle: var(--primary-subtle);                          /* 选中底/弱强调面 */
+  --color-primary-foreground-soft: var(--primary-foreground-soft);        /* 弱强调面上的字 */
+  --color-secondary: var(--secondary);                                    /* 次级填充按钮 */
+  --color-secondary-foreground: var(--secondary-foreground);              /* —— */
+  --color-muted: var(--muted);                                            /* 弱面 */
+  --color-muted-foreground: var(--muted-foreground);                      /* —— */
+  --color-accent: var(--accent);                                          /* hover/焦点面 */
+  --color-accent-foreground: var(--accent-foreground);                    /* —— */
+  --color-destructive: var(--destructive);                                /* 危险/错误 */
+  --color-destructive-foreground: var(--destructive-foreground);          /* —— */
+  --color-warning: var(--warning);                                        /* 警告 */
+  --color-warning-foreground: var(--warning-foreground);                  /* —— */
+  --color-success: var(--success);                                        /* 已下载/已完成 */
+  --color-success-foreground: var(--success-foreground);                  /* —— */
+  --color-gold: var(--gold);                                              /* VIP/会员（承接 guoapp tertiary） */
+  --color-border: var(--border);                                          /* 卡片边框 */
+  --color-border-subtle: var(--border-subtle);                            /* 分隔线 */
+  --color-input: var(--input);                                            /* 输入框边框 */
+  --color-ring: var(--ring);                                              /* 焦点环 */
+  --color-sidebar: var(--sidebar);                                        /* 侧栏 */
+  --color-sidebar-foreground: var(--sidebar-foreground);                  /* 侧栏文字 */
+  --color-sidebar-primary: var(--sidebar-primary);                        /* 侧栏选中底 */
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);  /* 侧栏选中字 */
+  --color-sidebar-border: var(--sidebar-border);                          /* —— */
+  --color-skeleton: var(--skeleton);                                      /* 骨架屏 */
+  --color-scrim: var(--scrim);                                            /* 模态遮罩 */
+  --color-stage: var(--stage);                                            /* **播放台恒定暗色**，双主题同值 */
+  --color-danmaku: var(--danmaku);                                        /* 弹幕文字（播放台上恒定） */
+  --color-scroll-thumb: var(--scroll-thumb);                              /* 滚动条 */
+
+  /* §3.1 语义别名：shadcn 组件用名（卡片/浮层的字、sidebar 扩展名） */
+  --color-card-foreground: var(--foreground);                   /* shadcn card.tsx 用名（§3.1 无此令牌，语义等于主文字） */
+  --color-popover-foreground: var(--foreground);                /* shadcn popover/dropdown/tooltip 用名 */
+  --color-sidebar-accent: var(--accent);                        /* shadcn sidebar.tsx 用名 */
+  --color-sidebar-accent-foreground: var(--accent-foreground);  /* shadcn sidebar.tsx 用名 */
+  --color-sidebar-ring: var(--ring);                            /* shadcn sidebar.tsx 用名 */
+
+  /* ── §3.4 圆角：单一基准派生（shadcn 模式） ─────────────────────── */
+  --radius-xs: calc(var(--radius) * 0.5);   /* 徽标/进度点 · 5.0px */
+  --radius-sm: calc(var(--radius) * 0.7);   /* 按钮/输入/集数格 · 7.0px */
+  --radius-md: calc(var(--radius) * 0.9);   /* 卡片内容块 · 9.0px */
+  --radius-lg: var(--radius);               /* 卡片 · 10.0px */
+  --radius-xl: calc(var(--radius) * 1.3);   /* 海报 · 13.0px */
+  --radius-2xl: calc(var(--radius) * 1.6);  /* Sheet/弹层 · 16.0px */
+  --radius-3xl: calc(var(--radius) * 2.0);  /* Dialog · 20.0px */
+  --radius-4xl: calc(var(--radius) * 2.4);  /* 超大容器（扩展档，闭合 Tailwind 圆角命名空间） · 24.0px */
+  --radius-full: 9999px;                    /* 药丸（播放悬浮按钮、弹幕开关） */
+
+  /* ── §3.5 阴影：真身是 --elevation-*（值随主题切换，故不能自引用同名） ── */
+  --shadow-xs: var(--elevation-xs);      /* 卡片 hover */
+  --shadow-sm: var(--elevation-sm);      /* 悬浮卡片、下拉 */
+  --shadow-md: var(--elevation-md);      /* Dialog、Sheet */
+  --shadow-lg: var(--elevation-lg);      /* 模态、Toast */
+  --shadow-glow: var(--elevation-glow);  /* 播放页强调控件焦点（仅深色） */
+}
+
+/* ── §3.7 z-index 令牌化工具类（与 z-10/20/… 裸数字档同值） ────────── */
+@utility z-base {
+  z-index: var(--z-base);
+}
+@utility z-raised {
+  z-index: var(--z-raised);
+}
+@utility z-sticky {
+  z-index: var(--z-sticky);
+}
+@utility z-sidebar {
+  z-index: var(--z-sidebar);
+}
+@utility z-overlay {
+  z-index: var(--z-overlay);
+}
+@utility z-dialog {
+  z-index: var(--z-dialog);
+}
+@utility z-toast {
+  z-index: var(--z-toast);
+}
+@utility z-player-ctl {
+  z-index: var(--z-player-ctl);
+}
+@utility z-danmaku {
+  z-index: var(--z-danmaku);
+}
+@utility z-drag {
+  z-index: var(--z-drag);
+}
+
+/* ── §3.6 时长令牌化工具类（duration-<ms> 裸数字档亦同值） ─────────── */
+@utility duration-instant {
+  --tw-duration: var(--duration-instant);
+  transition-duration: var(--duration-instant);
+}
+@utility duration-fast {
+  --tw-duration: var(--duration-fast);
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  --tw-duration: var(--duration-base);
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  --tw-duration: var(--duration-slow);
+  transition-duration: var(--duration-slow);
+}
+@utility duration-player {
+  --tw-duration: var(--duration-player);
+  transition-duration: var(--duration-player);
+}
+
+/* ── §3.6 reduced motion：全局降级（播放器控件显隐与弹幕滚动同样受此约束） ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
