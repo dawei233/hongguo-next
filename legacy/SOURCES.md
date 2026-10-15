@@ -12,7 +12,7 @@
 |---|---|---|---|
 | **上游** | [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp) | 🟢 仍在开发 | 未直接并入。经本方 fork 间接承接，**须跟踪** |
 | **上游** | [jackotom/hongguo-drama](https://github.com/jackotom/hongguo-drama) | 🟢 仍在开发（GPL-3.0） | 未直接并入。经本方 fork 间接承接，**须跟踪** |
-| 本方 fork | [dawei233/guoapp-android](https://github.com/dawei233/guoapp-android) | ⚪ 已停止由本方维护 | vendor |
+| 本方 fork | [dawei233/guoapp-android](https://github.com/dawei233/guoapp-android) | ⚪ 已停止由本方维护 | vendor（**已决：直接采用**，上游未声明许可 → 署名 + 响应通道，见 [`../NOTICE`](../NOTICE) 第三节） |
 | 本方 fork | [dawei233/hongguo-drama](https://github.com/dawei233/hongguo-drama) | ⚪ 已停止由本方维护 | 搬运 / 移植 |
 | **自有** | [dawei233/hongguo-monorepo](https://github.com/dawei233/hongguo-monorepo) | ⚫ 已停止开发 | 移植（Python → Go） |
 
@@ -30,7 +30,12 @@ B:
   upstream_repo: https://github.com/zhoufuweigg/guoapp.git
   upstream_ref: 0e60928            # 上游 main；已被 repo_ref 完全包含
   upstream_status: active          # 最后核实 2026-10-15：916★ / 10 open issue / 未归档
-  license: NONE                    # 上游未声明许可证；本方仅授权自己新增/修改的部分
+  upstream2:                       # 上游① 自述的原始来源；本仓无法进一步核实（链条终点）
+    name: 短剧库 APP               # 网上通称「鱼佬」；未提供原始仓库
+    repo: null
+    license: NONE                  # 未提供许可证信息；源码来自互联网，原仓与许可均无法核实
+  license: NONE                    # 上游未声明许可证；本方仅授权本人新增/修改的部分
+  adoption: direct                 # 已决（非待办）：直接采用 + 完整署名 + 响应通道；授权范围见 NOTICE 第三节
   taken:
     - native/core/**        → core/          # 121 文件 / 24035 行 / 27 测试
     - native/bridge/main.go → bridge/go/main.go

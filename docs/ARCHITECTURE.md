@@ -1,7 +1,8 @@
 # hongguo-next 架构设计
 
-> 状态：草案 v4 · 日期：2026-10-15
-> **本版修正（v4）：来源结构的语义改正。** 原文「三个老仓均已停止开发」**是错的**。核实结论：**只有自有层 `dawei233/hongguo-monorepo` 真正停止开发**（版权人自有项目，非 fork，最后推送 2026-10-11）；`dawei233/guoapp-android` 与 `dawei233/hongguo-drama` 是**本方 fork，仅"由本方停止维护"**，它们的上游 `zhoufuweigg/guoapp` 与 `jackotom/hongguo-drama` **仍在活跃开发**。据此改：① §1.2 改为「**上游 / 本方 fork / 自有**」三层表述，并给出**上游仓库链接**与两侧 commit SHA；② **新增 §1.3「上游跟踪义务」**（原 §1.3 顺延为 §1.4），定义 `legacy/SOURCES.md` 的上游跟踪字段、评估节奏与回移判据；③ §3.4 许可表与署名声明的授权范围**据实收窄**（上游是第三方仓，本仓不对其主张许可）；④ §8 风险表同步更新。
+> 状态：草案 v5 · 日期：2026-10-15
+> **本版修正（v5）：B 链路（`guoapp`）许可定性已决，全文去掉"待授权"框架。** 版权人明确决定：**直接采用**上游未声明许可的 B 链路来源，代价是以**完整、如实的署名声明 + 合规响应通道**承担合规责任（`NOTICE` 第三节）。据此本文**删除全部"待授权 / 需取得许可才能用 / 许可前置阻塞"性质的表述**，一律改为已决事实：① §0 第 2、5 条重写；② §1.2 授权范围与来源表 B 行同步；③ §3.2 #19（`B/NOTICE` 并入方式）改为"已决 + 全链署名 + 响应通道 + 使用者自评"；④ §3.4 许可与合规新增 **B 链路定性段落（3.4.1）**、**合规响应通道（3.4.2）**、**使用者自评提示（3.4.3）**；⑤ §7 路线图与 §8 风险表（"上游第三方权利人主张权利"一行）去掉"索取许可"，改为直接采用 + 署名 + 响应通道。
+> **上一版修正（v4）：来源结构的语义改正。** 原文「三个老仓均已停止开发」**是错的**。核实结论：**只有自有层 `dawei233/hongguo-monorepo` 真正停止开发**（版权人自有项目，非 fork，最后推送 2026-10-11）；`dawei233/guoapp-android` 与 `dawei233/hongguo-drama` 是**本方 fork，仅"由本方停止维护"**，它们的上游 `zhoufuweigg/guoapp` 与 `jackotom/hongguo-drama` **仍在活跃开发**。据此改：① §1.2 改为「**上游 / 本方 fork / 自有**」三层表述，并给出**上游仓库链接**与两侧 commit SHA；② **新增 §1.3「上游跟踪义务」**（原 §1.3 顺延为 §1.4），定义 `legacy/SOURCES.md` 的上游跟踪字段、评估节奏与回移判据；③ §3.4 许可表与署名声明的授权范围**据实收窄**（上游是第三方仓，本仓不对其主张许可）；④ §8 风险表同步更新。
 > **上一版修正（v3）**：① **安卓端技术栈判断错误已更正** —— `apps/android` = **B 的 Flutter 应用整端 vendor**（`lib/` 84 文件 / 30558 行 + `android/ios/windows` 平台层 + `bridge/dart` FFI 保留），**不是**"Media3 + Gradle 重建"；被废弃的是旧 monorepo（A）的 Java WebView + Media3 方案，不是 Flutter。② **PC 端播放器更正**为 `@videojs/react` 10.x 的 `createPlayer({features})` 组合式 API（npm 包 `video.js` 在 v10 已是墓碑包）。
 > 适用仓库：`github.com/dawei233/hongguo-next`（本地为 `/workspace/红果/hongguo-next`）
 > 前提：来源仓分三层 —— **自有层** `hongguo-monorepo`（版权人自有项目，**已停止开发**，唯一真正停止的一个）、**本方 fork 层** `dawei233/guoapp-android` 与 `dawei233/hongguo-drama`（由本方**停止维护**）、以及**上游层** `zhoufuweigg/guoapp` 与 `jackotom/hongguo-drama`（**第三方仓，仍在活跃开发**，见 §1.3）。其代码按本仓许可策略**直接并入本仓统一维护**，自有层与本方 fork 层仅作历史存档。
@@ -11,10 +12,10 @@
 ## 0. 一句话结论（先读这段）
 
 1. **本仓不做"三合一仓库"的形态合并，但做"代码归一"**：共享 Go 内核 + 双端壳 + 站源插件 + 弹幕内核，来源仓中可用的实现**直接并入** `core/` 统一维护，不再有"构建期外部 checkout"或"零代码复制"这类隔离层。
-2. **全仓统一 GPL-3.0**。授权范围必须说准：版权人对**自有层** `hongguo-monorepo`（`license=NONE`、非 fork）与**本方两个 fork 中由本人新增/修改的部分**享有版权并授权按 GPL-3.0 并入；`hongguo-drama` 的 fork 基线来自同为 **GPL-3.0** 的 `jackotom/hongguo-drama`（同许可，搬运即合规）；而 `guoapp-android` 的 fork 基线来自**未声明许可证**的 `zhoufuweigg/guoapp`（**第三方仓，仍在活跃开发**）—— **该部分仍是无许可的第三方代码，本仓不作任何许可主张**，仅如实记录来源（§3.4）。`LICENSE` 已就位（仓库根）。
+2. **全仓统一 GPL-3.0**。授权范围必须说准：版权人对**自有层** `hongguo-monorepo`（`license=NONE`、非 fork）与**本方两个 fork 中由本人新增/修改的部分**享有版权并授权按 GPL-3.0 并入；`hongguo-drama` 的 fork 基线来自同为 **GPL-3.0** 的 `jackotom/hongguo-drama`（同许可，搬运即合规）；而 `guoapp-android` 的 fork 基线来自**未声明许可证**的 `zhoufuweigg/guoapp`（**第三方仓，仍在活跃开发**）—— **该部分仍是无许可的第三方代码，本仓仅作署名与来源记录，既不主张授权、也不声称已获授权**（§3.4.1、`NOTICE` 第三节）。`LICENSE` 已就位（仓库根）。
 3. **决定性事实：本仓的 GPL-3.0 不是新引入的约束，而是与既有分发现实一致。** `hongguo-drama` 已捆绑 **ffmpeg 9.0.2 + x264**，构建为 **GPLv3-or-later**（`build/ffmpeg/WINDOWS-NOTICE.txt`、`THIRD-PARTY-NOTICES.md`），因含 x264 无法走 LGPL —— **现有分发物本来就是 GPLv3 二进制**。既然产品线已经在分发 GPLv3 二进制，把源码也统一为 GPL-3.0 不增加任何新义务，却消掉了全部许可隔离工作。
 4. **搬运策略从"重写/零复制"整体改为"原样搬运或最小改造"**：B 的 24035 行 Go 内核（121 文件 / 27 测试）直接 vendor 进 `core/`（仅删 `buildAllSources` 门控）；C 的 `xifan.js`/`hema.js`（302 行）直接移植；C 的弹幕签名与其黄金向量测试直接搬用（不再自生成向量）。只有跨越语言边界的地方（A 的 Python → Go）才需要转写。
-5. **不再有许可前置阻塞**：原 M0「补 LICENSE + 发许可邮件」整个消失，工期净减少约 5–7 人日的前置与隔离工作，且把最大的不确定性（上游不回信）直接归零。
+5. **许可事项已决：B 链路直接采用 + 完整署名，且不存在待办的授权前置。** B 链路（`guoapp`）的上游① `zhoufuweigg/guoapp` 与上游②「鱼佬」的短剧库 APP **均未声明许可证**。版权人**已明确决定直接采用**该来源，代价是以**完整、如实的署名声明 + 合规响应通道**承担合规责任（定性与文本见 `NOTICE` 第三节、本文 §3.4.1）。因此：① **不再有"向上游索取许可 / 发许可邮件"这类待办事项**，它既不是开工前置、也不是发布前置；② 原 M0「补 LICENSE + 发许可邮件」整段取消，工期净减少约 5–7 人日的隔离工作；③ 最大的不确定性（上游是否回信）直接归零 —— 合规责任由**署名 + 响应通道**承担，不依赖上游回应。
 6. **安卓端不是"重建"，而是"整端 vendor"**：安卓版**直接采用 B 的 Flutter 应用**（`github.com/dawei233/guoapp-android`，用户明确指示"安卓版用他的"）。其 `lib/`（**84 文件 / 30558 行 Dart**）+ `android/`/`ios/`/`windows/` 平台层**原样并入 `apps/android`**；B 的 Go 内核本就通过 `native/bridge/main.go` 的 FFI（2 个 C 符号）供该 Flutter 端调用，Dart 侧绑定即 `lib/core_bridge.dart`，所以桥接层原样保留即可。**被废弃的是旧 monorepo（A）的 Java WebView + Media3 方案，不是 Flutter。** 本文此前把 `apps/android` 写成"Media3 + Gradle 重建"是判断错误，已全文更正。
 7. **PC 端播放器用 `@videojs/react` 10.x**：npm 包 `video.js` 在 v10 已是**墓碑包**（`videojs()` / `registerPlugin` / `registerComponent` 全部 `throwLegacyError('VJS8_LEGACY_*')`，README 指向 `@videojs/html` 与 `@videojs/react`）。本仓 PC 端采用 **`@videojs/react` 10.x 的 `createPlayer({features: [...]})` 组合式 API**（返回 `{ Player, usePlayer, useMedia }`），**禁止**按 video.js 8 教程写 `videojs('my-video')` 实例 + `registerPlugin` 全局注册。HLS 由 v10 自带的 `@videojs/spf` 引擎承担，hls.js 仅作可选 adapter（`<HlsJsVideo/>`）。详见 `DESIGN-SYSTEM.md` §1.3。
 8. **本仓从两个"活着的"上游 vendor 代码，因此新增一项长期义务：上游跟踪。** `zhoufuweigg/guoapp`（2026-09-26，916 ★，`license=NONE`）与 `jackotom/hongguo-drama`（2026-10-15，233 ★，GPL-3.0）**均未归档、仍在开发**，而本方的两个 fork 已停更 —— 本仓的 vendored 快照从并入那天起就在落后。因此：① 每个 vendor 来源必须在 `legacy/SOURCES.md` 记录**上游仓库 URL + 上游 commit SHA + 本方 fork 的 SHA**；② 按固定节奏评估上游提交、**按需定向回移**（站源失效修复、播放修复优先）；③ 本仓**不以 merge/rebase 上游的方式同步**（本仓是整合重写，不是 fork 的直接延续），只做定向 cherry-pick。完整规则见 **§1.3**。
@@ -55,12 +56,12 @@
 
 - **自有层 A** `hongguo-monorepo`：版权人本人所有、非 fork、`license=NONE` → 版权人有权以 GPL-3.0 重新授权。
 - **本方 fork C** `hongguo-drama`：fork 基线来自同为 GPL-3.0 的 `jackotom/hongguo-drama` → 两端同许可，搬运与再分发即合规（无需再授权）。
-- **本方 fork B** `guoapp-android`：版权人授权的是**本人在该 fork 中新增/修改的部分**（本方 57 个提交）。其 fork 基线来自**未声明许可证**的 `zhoufuweigg/guoapp`，**该部分仍是无许可的第三方代码** —— 本仓**不作任何许可主张**，仅如实记录（§3.4），并保留配合权利人处理的渠道。
+- **本方 fork B** `guoapp-android`：版权人授权的是**本人在该 fork 中新增/修改的部分**（本方 57 个提交）。其 fork 基线来自**未声明许可证**的 `zhoufuweigg/guoapp`（再往上还有**无法核实的**上游②「鱼佬」的短剧库 APP），**该部分仍是无许可的第三方代码** —— 本版权人**已决定直接采用**，本仓对其**仅作署名与来源记录：既不主张授权，也不声称已获授权**（§3.4.1，完整声明见 `NOTICE` 第三节），并保留配合权利人处理的渠道（§3.4.2）。
 
 | 来源 | 层 | 许可现状 | 本仓的授权依据 | 并入方式 |
 |---|---|---|---|---|
 | A `hongguo-monorepo` | 自有 | `license=NONE`（非 fork） | ✅ 版权人有权以 GPL-3.0 授权 | Python 逻辑 → 转写为 Go 进 `core/media`；实测结论作为 ADR 固化 |
-| B `guoapp-android` | 本方 fork | `license=NONE`，fork 自无许可的上游 | ⚠ 仅本人新增/修改部分可授权；上游部分不主张 | Go 内核 **原样 vendor 进 `core/`**（仅删 edition 门控）；**Flutter 端（`lib/` + `android/ios/windows` 平台层）原样 vendor 进 `apps/android`** |
+| B `guoapp-android` | 本方 fork | `license=NONE`，fork 自无许可的上游（再往上「鱼佬」一链**无法核实**） | ⚠ **已决：直接采用**；仅本人新增/修改部分可授权，上游派生部分**仅署名记录，不主张、不声称已获授权**（§3.4.1） | Go 内核 **原样 vendor 进 `core/`**（仅删 edition 门控）；**Flutter 端（`lib/` + `android/ios/windows` 平台层）原样 vendor 进 `apps/android`** |
 | C `hongguo-drama` | 本方 fork | **GPL-3.0**，fork 自同为 GPL-3.0 的上游 | ✅ 同许可，搬运即合规 | xifan/hema、弹幕签名与向量测试 **直接搬运/移植** |
 | B 上游 `zhoufuweigg/guoapp` | 上游 | `license=NONE`，**活跃** | ❌ **不并入**，仅溯源与跟踪 | 无（经 B 间接承接） |
 | C 上游 `jackotom/hongguo-drama` | 上游 | **GPL-3.0**，**活跃** | ❌ **不并入**，仅溯源与跟踪 | 无（经 C 间接承接） |
@@ -423,7 +424,7 @@ sequenceDiagram
 - **最小改造**：复制后只删/改与本仓定位冲突的片段（例如 edition 门控），不改其余行为。
 - **不搬**：仅限"搬过来没有收益"的部分（混淆产物、NAS 服务端形态、老 UI）。
 
-**许可前提**：并入的内容来自**自有层**（版权人有权以 GPL-3.0 授权）与**本方两个 fork**（`hongguo-drama` 与其上游同为 GPL-3.0，搬运即合规；`guoapp-android` 仅本人新增/修改部分可授权，其上游 `zhoufuweigg/guoapp` 为**未声明许可的第三方仓**）。本仓亦为 GPL-3.0（`LICENSE` 已就位）。因此映射表里**不再有"许可风险"列** —— 每个条目的唯一判据是"工作量 vs 收益"。搬运行为本身只需履行 §3.4 的署名与来源记录义务，并按下表登记**上游跟踪字段**（§1.3）。
+**许可前提**：并入的内容来自**自有层**（版权人有权以 GPL-3.0 授权）与**本方两个 fork**（`hongguo-drama` 与其上游同为 GPL-3.0，搬运即合规；`guoapp-android` 仅本人新增/修改部分可授权，其上游 `zhoufuweigg/guoapp` 为**未声明许可的第三方仓**）。就后者，版权人**已决定直接采用**，授权范围如实收窄、并以完整署名 + 响应通道承担合规责任 —— 这是**已决事实，不是待办**（§3.4.1–§3.4.3、`NOTICE` 第三节）。本仓亦为 GPL-3.0（`LICENSE` 已就位）。因此映射表里**不再有"许可风险"列** —— 每个条目的唯一判据是"工作量 vs 收益"，**也无需为规避许可而设计任何重写或隔离**。搬运行为本身只需履行 §3.4 的署名与来源记录义务，并按下表登记**上游跟踪字段**（§1.3）。
 
 | 来源 | 层 | 上游是否活跃 | 是否需跟踪 |
 |---|---|---|---|
@@ -460,7 +461,7 @@ sequenceDiagram
 | 16 | `B/native/bridge/main.go` | 30 | `bridge/go/main.go` | **原样 vendor** | "2 个导出符号 + JSON 字符串进出"的极简 FFI 形状（`DuanjuRequest`/`DuanjuFree`）。**B 的 Flutter 安卓端已经在用这两个符号**（`lib/core_bridge.dart` 经 `dart:ffi` 调用），因此形状原样保留即可，不需要另设计安卓侧 ABI。 |
 | 17 | `B/native/core/*_test.go` | **27 文件** | 随 vendor 一并进仓 | **原样 vendor** | 原先被判为"测试是受保护表达，必须重写等价测试"，现随代码一起搬入。27 个测试文件是本仓 `core-test` 的现成回归网，**必须全绿**才能继续（见 §6）。 |
 | 18 | `B/lib/`、`B/android/`、`B/ios/`、`B/windows/`、`B/test/`、`B/integration_test/` | **84 个 dart 文件 / 30558 行**（另：`android/` 32 文件、`ios/` 7 文件、`windows/` 3 文件平台层） | `apps/android/`（**整端原样 vendor**） | **原样 vendor** | ★ **本行是本次修正的重点，原判"❌ 不搬 / 由 apps/android 重建（Media3）"为错误判断。** B 是 **Flutter 应用**（`pubspec.yaml` → `name: duanju_app`，依赖 `media_kit` / `video_player` / `ffmpeg_kit_flutter_new_min_gpl` / `ffi`），**不是 Media3 原生端**。用户明确指示"安卓版用 guoapp-android 他的"，故 **`lib/` 全量 + `android/`/`ios/`/`windows/` 平台层原样搬进 `apps/android`，不重建**。仅三处最小改造：① `pubspec.yaml` 包名 `duanju_app` → `hongguo_next`；② 主题层改为 `ThemeExtension` 令牌镜像（`DESIGN-SYSTEM.md` §6.1）；③ FFI 随 `core/` 改名对齐。`ios/`+`windows/` 属 B 自带的 Flutter 平台层，随仓保留但本仓首发不做这两端。**`bridge/dart` 的 FFI 绑定即取自这里的 `lib/core_bridge.dart`**（见 §2.1），二者不得各改一份。 |
-| 19 | `B/NOTICE`、`THIRD-PARTY-NOTICES.md` | — | 并入本仓 `NOTICE` | **改造** | 沿用 B 的来源链路声明格式，如实写明搬入了 `native/core/`（121 文件）与 `native/bridge/main.go`，并保留上游① [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp)（**上游链接 + 仍在活跃开发的事实 + 未声明许可证**）、上游②「鱼佬」的署名与"两跳均未声明许可"的记录；同时写明本仓对该 fork 仅就版权人本人新增/修改的部分主张授权。 |
+| 19 | `B/NOTICE`、`THIRD-PARTY-NOTICES.md` | — | 并入本仓 `NOTICE` | **改造（已定为对外可发布的独立章节）** | 沿用 B 的来源链路声明格式，但覆盖本仓实际情况，落为 `NOTICE` **第三节**（B 链路采用方式与合规定性）—— **已决事实，无待办**。五块内容：① **全链署名**：本仓 ← 本方 fork `dawei233/guoapp-android`（`ff3bad2`，含本方 57 个提交）← 上游① [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp)（上游链接 + **仍在活跃开发**的事实 + **未声明许可证**）← 上游②「鱼佬」的短剧库 APP（**来自互联网，原始仓库与许可信息均未提供、无法进一步核实**，链条到此为止）；② **授权范围如实收窄**：本仓仅就版权人**本人编写/修改的部分**以 GPL-3.0 授权，对 B 链路上游派生部分**仅作署名与来源记录，既不主张授权、也不声称已获授权**，并声明本仓不是该部分的权利人；③ **合规响应通道**：权利人经 Issue 联系，本仓配合处理（含**移除相关内容**、补充署名、下架）；④ **使用者提示**：B 链路派生部分上游未声明许可，**使用者需自行评估**；⑤ **与 C（GPL-3.0，可正常再分发）和 A（自有）的区分表**。另记：B 自身 README 有"在未获得上游授权前，请勿将本项目用于任何商业用途或对外分发"一句，`NOTICE` 第三节 3.6 明确写出本仓**不沿用**该前置（直接采用 + 公开分发），并说明二者是知情下的不同取舍 —— **不留含混**。 |
 
 ### 3.3 PC 端（来自 C，GPL-3.0 —— 直接搬运/移植）
 
@@ -484,11 +485,29 @@ sequenceDiagram
 |---|---|---|
 | 本仓全部源码 | **GPL-3.0** | `LICENSE`（GPL-3.0 全文，674 行）已置于仓库根 |
 | A `hongguo-monorepo` 来源代码（自有层） | 由本仓以 GPL-3.0 授权 | 版权人本人名下、`license=NONE`、**非 fork** 的自有仓，有权重新授权 |
-| B `guoapp-android` 来源代码（本方 fork） | **仅本人新增/修改的部分**由本仓以 GPL-3.0 授权 | 版权人本人名下 fork；**fork 基线来自未声明许可证的第三方上游**，该部分**不作许可主张** —— 如实记录，仅此而已 |
+| B `guoapp-android` 来源代码（本方 fork） | **仅本人新增/修改的部分**由本仓以 GPL-3.0 授权；**上游派生部分不在授权范围内** | 版权人本人名下 fork，**已决定直接采用**；**fork 基线来自未声明许可证的第三方上游**，本仓对该部分**仅作署名与来源记录 —— 既不主张授权，也不声称已获授权**（§3.4.1）。本仓不是该部分的权利人，其 GPL-3.0 声明不改变该部分的法律状态 |
 | C `hongguo-drama` 来源代码（本方 fork） | **GPL-3.0**（原生） | 该 fork 与其上游 `jackotom/hongguo-drama` 均为 GPL-3.0，与本仓同许可，搬运即合规 |
 | **上游** `zhoufuweigg/guoapp` | **未声明许可证**（`license=NONE`） | 第三方仓、**仍在活跃开发**；**不并入本仓**，仅作来源溯源，本仓不主张其许可 |
 | **上游** `jackotom/hongguo-drama` | **GPL-3.0** | 第三方仓、**仍在活跃开发**；**不并入本仓**，仅作来源溯源 |
 | 捆绑的 ffmpeg / x264 | **GPLv3-or-later** | 见下 |
+
+**3.4.1 B 链路（`guoapp`）的采用方式：已决事实，无待办**
+
+**版权人已明确决定直接采用 B 链路来源，并以完整、如实的署名声明承担合规责任。** 全文（可对外发布）见 `NOTICE` **第三节**，此处记其要点：
+
+1. **全链署名**：本仓 ← 本方 fork `dawei233/guoapp-android`（`ff3bad2`，含本方 57 个提交）← 上游① [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp)（**仍在活跃开发**、**未声明许可证**）← 上游②「鱼佬」的短剧库 APP（**源码来自互联网，原始仓库与许可信息均未提供，无法进一步核实** —— 链条到此为止）。
+2. **授权范围如实收窄**：本仓的 GPL-3.0 只覆盖**版权人本人编写/修改的部分**（含 A 链路自有仓、C 链路同许可内容与本仓新增代码）。对 B 链路中**派生自上游①②的部分**，本仓**仅作署名与来源记录：既不主张授权，也不声称已获授权**；本仓不是该部分的权利人，无权代表其授权，其 GPL-3.0 声明也不改变该部分的法律状态。
+3. **不是待办、不是前置**：**本仓不存在"向上游索取许可 / 发许可邮件"这类待办事项**，它既不阻塞开工，也不阻塞发布；**不以取得上游回应为条件**。原 M0 已整段取消（§7）。
+4. **与 B 自身谨慎表述的关系（明确不一致，不含混）**：B 仓 README「关于二次开发」写有"在未获得上游授权前，请勿将本项目用于任何商业用途或对外分发"。本仓**明确不沿用**该前置条件 —— 版权人已知情并决定**直接采用、公开分发**；承担方式改为署名声明 + 响应通道，而非"不发布"。本仓**不主张**自己更谨慎，也**不主张**该表述已被上游授权解除。逐字对照见 `NOTICE` 第三节 3.6。
+5. **与 C / A 的区分**：只有 B 链路存在"上游未声明许可"的问题 —— C 全链 GPL-3.0（**可正常再分发**），A 是版权人自有（**有权授权**）。区分表见 `NOTICE` 第三节 3.5。
+
+**3.4.2 合规响应通道**
+
+B 链路（以及 A / C 链路、算法出处 `woshishiq1/drpys` / `N3urda/hongguoTV` / `Hululu007/drpy-node`、各第三方组件）的**任一权利人**若认为本仓不妥，可经本仓 **Issue**（`https://github.com/dawei233/hongguo-next/issues`）联系：本仓承诺**立即配合处理**，包括**移除相关代码或文件**、补充署名、调整声明、下架或删除仓库，**不要求先行举证权利归属、不拖延**。这是本仓履行"直接采用"这一决定的**对应义务**，与 `NOTICE` 第三节 3.3 同源。
+
+**3.4.3 对使用者的提示**
+
+B 链路派生部分的上游**未声明许可**，其法律状态**不因本仓的署名声明而改变** —— **使用者需自行评估**使用、修改、再分发该部分的风险。本仓的署名与来源记录是**事实陈述**，不构成授权，也不构成对第三方权利的让渡或放弃。
 
 **为什么全仓 GPL-3.0 是唯一自洽的选择**
 
@@ -497,7 +516,7 @@ sequenceDiagram
 **必须保留的署名（写进 `NOTICE`）**
 
 1. **直接上游（C 链路）**：本方 fork `dawei233/hongguo-drama`（已停更，`main` = `c884fab`）← [jackotom/hongguo-drama](https://github.com/jackotom/hongguo-drama)（**第三方仓，仍在活跃开发**，2026-10-15，`main` = `5a12c88`，GPL-3.0）← `zhenyong97/hongguo-downloader` ← `327044572/hongguo-downloader`。按 GPL-3.0 第 5(a) 条声明"本仓为修改版本、修改时间与主要修改内容"。
-2. **直接上游（B 链路）**：本方 fork `dawei233/guoapp-android`（已停更，`android-only` = `ff3bad2`，含本方 57 个提交）← [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp)（**第三方仓，仍在活跃开发**，2026-09-26，`main` = `0e60928`，**未声明许可证**）← 「鱼佬」的短剧库 APP 源码（上游自述，未提供仓库与许可信息）。**如实记录：上游仍在开发，且两跳均未声明许可证**；本仓为版权人自有 fork，仅对本人新增/修改的部分有权以 GPL-3.0 授权。
+2. **直接上游（B 链路）**：本方 fork `dawei233/guoapp-android`（已停更，`android-only` = `ff3bad2`，含本方 57 个提交）← [zhoufuweigg/guoapp](https://github.com/zhoufuweigg/guoapp)（**第三方仓，仍在活跃开发**，2026-09-26，`main` = `0e60928`，**未声明许可证**）← 「鱼佬」的短剧库 APP 源码（**来自互联网，原始仓库与许可信息均未提供、上游自述，本仓无法进一步核实**）。**如实记录：上游仍在开发，且两跳均未声明许可证**；本仓为版权人自有 fork，**已决定直接采用**，仅对本人新增/修改的部分有权以 GPL-3.0 授权，上游派生部分**仅署名记录**（§3.4.1）。
 3. **来源（A 链路）**：`dawei233/hongguo-monorepo`，版权人自有仓、**非 fork**、`license=NONE`、**已停止开发**（最后推送 2026-10-11）—— 无上游，不需要跟踪。
 4. **算法出处**：签名与 Spade 取址算法改编自 `woshishiq1/drpys`（GPL-3.0），经 `N3urda/hongguoTV` vendor 源码核对；许可证全文随仓分发于 `third_party/drpys/`。
 5. **接口参考**：西饭（xifan）来源的接口路径核对参考 `Hululu007/drpy-node`（GPL-3.0，commit `295f2b7`）。
@@ -960,11 +979,11 @@ jobs:
 
 ## 7. 分批落地计划（M1–M4，工期已按搬运策略重算）
 
-**总量变化**：原先的 M0（许可前置：给 A 补 LICENSE、向上游发许可邮件）**整段消失**；M1/M2/M3 因改为搬运而大幅缩水；**M4 中的安卓端也从"重建"改为"整端 vendor B 的 Flutter 应用"**（12–16 → 9–13 人日，省下的正是"重写安卓 UI + 从零搭 Android 播放器"这部分），只有 PC 端 UI 与播放器仍是新写。**净工作量从约 60–80 人日降到约 22–33 人日。**
+**总量变化**：许可事项**已决**（B 链路直接采用 + 完整署名 + 响应通道，`NOTICE` 第三节、§3.4.1），**原先的 M0（"许可前置"：给 A 补 LICENSE、向上游发许可邮件）整段取消** —— 它不是"暂缓"，而是不再存在，本仓**没有任何以取得上游授权为条件的前置工作**；M1/M2/M3 因改为搬运而大幅缩水；**M4 中的安卓端也从"重建"改为"整端 vendor B 的 Flutter 应用"**（12–16 → 9–13 人日，省下的正是"重写安卓 UI + 从零搭 Android 播放器"这部分），只有 PC 端 UI 与播放器仍是新写。**净工作量从约 60–80 人日降到约 22–33 人日。**
 
 | 阶段 | 内容 | 完成判据 | 估计工作量 |
 |---|---|---|---|
-| **M1 契约与 vendor**（原 M0 许可工作已消失，直接从这里开工） | ① `B/native/core/**`（121 文件 / 24035 行）+ `bridge/main.go` 原样 vendor 进 `core/`，module 前缀替换；② 删除 `buildAllSources` 门控及其全部引用；③ 27 个测试跑通；④ `contracts/*.schema.json`、`core/source` 接口与 Caps 薄适配层（把 B 的 source id 与 `Drama`/`Task` 形状对到 §4.1 的 `Series`/`Episode`/`Stream`）；⑤ **建立 `legacy/SOURCES.md` 上游跟踪台账**：B/C 两条登记上游 URL、上游 SHA、本方 fork SHA 与 `last_triaged`（§1.3） | `go vet`/`go test -race` 三平台全绿；27 个测试无跳过；`legacy/SOURCES.md` 含 B/C 全部跟踪字段 | **5–7 人日** |
+| **M1 契约与 vendor**（原 M0 许可工作已整段取消 —— 许可事项已决，无待办前置，直接从这里开工） | ① `B/native/core/**`（121 文件 / 24035 行）+ `bridge/main.go` 原样 vendor 进 `core/`，module 前缀替换；② 删除 `buildAllSources` 门控及其全部引用；③ 27 个测试跑通；④ `contracts/*.schema.json`、`core/source` 接口与 Caps 薄适配层（把 B 的 source id 与 `Drama`/`Task` 形状对到 §4.1 的 `Series`/`Episode`/`Stream`）；⑤ **建立 `legacy/SOURCES.md` 上游跟踪台账**：B/C 两条登记上游 URL、上游 SHA、本方 fork SHA 与 `last_triaged`（§1.3）；⑥ 按 §3.4.1 完成 `NOTICE` 第三节（B 链路采用方式与合规定性）与捆绑组件的对外声明 | `go vet`/`go test -race` 三平台全绿；27 个测试无跳过；`legacy/SOURCES.md` 含 B/C 全部跟踪字段；`NOTICE` 第三节含全链署名、收窄后的授权范围、响应通道与使用者提示 | **5–7 人日** |
 | **M2 弹幕** | 搬 C 的 `danmaku.js`/`danmaku-sign.js`（JS→Go 移植）并与 B 的实现合并；搬 `danmaku-sign-vectors.json` + `danmaku-sign.test.cjs` 为 `core/danmaku/testdata/` 与 `sign_test.go`；`sm3.js` 移植；`layout.go` 与降级源 | 向量逐字节一致；nightly 直播冒烟通过 | **3–5 人日** |
 | **M3 站源与媒体** | ① 10 个 B provider 随 vendor 到位，仅做接口对齐与 Caps 实测校准；② `xifan.js`/`hema.js` 移植（302 行 → Go）；③ `mp4_sanitize.py` 移植为 `core/media/{sanitize,boxes}.go`；④ ffmpeg 解密链路 + 边下边播 | 每源 fixture 单测通过 + 实际播放成功；一集 1080p HEVC 加密档从抓到播全链路通过 | **5–8 人日** |
 | **M4 端侧** | `apps/desktop`（Electron + React 19，含**新写 UI 与 `@videojs/react` 10.x 播放器**）、`apps/android`（**整端 vendor B 的 Flutter 端**：`lib/` 84 文件 / 30558 行 + `android/ios/windows` 平台层 + `pubspec` 改名 + 令牌镜像；FFI 走 `bridge/dart`，**不重建 UI**）、发布流水线（含 ffmpeg 对应源码包） | 双端各发布一个可安装包；`flutter analyze`/`flutter test` 全绿；PC 端播放器不出现 `videojs()` v8 写法；安装包内含 NOTICE/LICENSE/源码包 | **9–13 人日** |
@@ -991,6 +1010,6 @@ jobs:
 | 弹幕签名算法被上游改动而静默失效 | 🔴 高 | `danmaku-live-nightly` 每日探活 + 告警；`ADR-0003` 记录两条已知"陷阱"并写成断言 |
 | 全仓 GPL-3.0 → 未来无法闭源或与闭源方合作 | 🟡 中 | **这是已明确接受的取舍**（版权人本人决定；且现有分发物因捆绑 x264 本就是 GPLv3 二进制，实为对齐现实）。若将来需要，只能对**新写的 PC 端代码**做双许可；`core/` 与 vendor 自 B 的 Flutter 端都无法回退 |
 | ffmpeg/x264 对应源码未随 Release 发布 → 违反 GPL-3.0 第 6 条 | 🔴 高 | `release` job 强制产出对应源码包并在 `NOTICE` 写获取路径；**只给上游链接不满足义务**，必须是与被分发二进制完全对应的源码 + 构建脚本 + 哈希 |
-| 上游第三方权利人（`zhoufuweigg/guoapp`、「鱼佬」）主张权利 | 🟡 中 | `NOTICE` 如实记录来源链路、**上游仍在活跃开发**的事实与"两跳均未声明许可"，**不做虚假许可声明**，并明确本仓仅对版权人本人新增/修改的部分主张授权；保留联系与配合下架渠道 |
+| 上游第三方权利人（`zhoufuweigg/guoapp`、「鱼佬」）主张权利 | 🟡 中 | **处置已决（不是待办、也不去索取许可）**：版权人已决定**直接采用**，以**完整如实署名**承担 —— `NOTICE` 第三节 3.1 记全链来源（含上游②「鱼佬」"来自互联网、原仓与许可均无法核实"）、3.2 如实收窄授权范围（本仓**仅就本人编写/修改的部分**以 GPL-3.0 授权；上游派生部分**仅署名记录，不主张、不声称已获授权**）、**3.3 合规响应通道**（权利人经 Issue 联系，本仓配合处理**含移除相关内容**）、3.4 使用者自行评估提示。同步落点见 §3.4.1–§3.4.3、`README.md`「许可与合规」 |
 | **vendored 快照持续落后于两个活跃上游** → 站源/播放修复拿不到、源悄悄失效 | 🔴 高 | 这是本次修正暴露的**真实工程变更**：`legacy/SOURCES.md` 登记上游 URL + 上游 SHA + 本方 fork SHA；按 **§1.3.2** 的节奏（每里程碑 + 每月）评估 `upstream_ref..upstream/main`，对站源失效修复 / 播放修复 / 弹幕签名调整做**定向 cherry-pick**，并登记 `backports`；**不以 merge/rebase 同步**（本仓是整合重写）。源侧另有 nightly 巡检兜底（见下行） |
 | 源方接口频繁变更 → 13 源维护负担 | 🟡 中 | 统一 `Source` 接口让每个源改动面 < 300 行；nightly 巡检定位失效源 |
