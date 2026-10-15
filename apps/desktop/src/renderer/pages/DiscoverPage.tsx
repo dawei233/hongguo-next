@@ -25,7 +25,11 @@ import { getHnBridge } from '@shared/ipc';
  * 同域），不是我们发明的兜底文案；但取不到时仍然如实显示空态。
  */
 const DEFAULT_SOURCE = 'hongguo';
-const DEFAULT_CATEGORY = '推荐';
+// 分类值必须是内核认可的 key（core/provider_hongguo_catalog.go 的 hongguoAppGenres）：
+// short_play=真人剧 / comic_series=漫剧 / ai_series=AI剧 / ''=全部。
+// 此前这里写的是 '推荐' —— 那既不是 key 也不是内核返回的任何分类，
+// 内核会回「内容分类无效」，导致发现页永远取不到内容。
+const DEFAULT_CATEGORY = 'short_play';
 
 export function DiscoverPage() {
   const navigate = useNavigate();
@@ -33,20 +37,25 @@ export function DiscoverPage() {
   const [category, setCategory] = useState<string | null>(null);
 
   const categories = useKernelQuery(() => fetchCategories(DEFAULT_SOURCE), [DEFAULT_SOURCE]);
-  const categoryNames = useMemo(
-    () => (categories.data?.items ?? []).map((item) => item.name).filter(Boolean),
-    [categories.data],
-  );
+  // Tabs 的 value 必须是分类 **id**（内核 `catalog` 与 `recommendations` 都按 key 匹配），
+  // label 才是显示名。此前 value 传的是 name（真人剧…），内核按 key 查不到 → 分类无效。
+  const categoryItems = useMemo(() => categories.data?.items ?? [], [categories.data]);
 
   // 题材列表到货后落到第一个真实分类上；用户点过之后不再自动覆盖。
   useEffect(() => {
     if (category !== null) return;
-    if (categoryNames.length > 0) setCategory(categoryNames[0] ?? null);
-  }, [category, categoryNames]);
+    if (categoryItems.length > 0) setCategory(categoryItems[0]?.id ?? null);
+  }, [category, categoryItems]);
 
   const activeCategory = category ?? DEFAULT_CATEGORY;
+  // catalog 的「全部」要串行抓 3 个 genre（core/provider_hongguo_catalog.go），
+  // 真实站源下实测 50s+，默认 65s 会撞线。给 catalog 单独放宽；
+  // 结果会进内核缓存，之后是即时命中。
   const catalog = useKernelQuery(
-    () => fetchCatalog({ source: DEFAULT_SOURCE, category: activeCategory, page: 1 }),
+    () => fetchCatalog(
+      { source: DEFAULT_SOURCE, category: activeCategory, page: 1 },
+      { timeoutMs: 180_000 },
+    ),
     [activeCategory],
   );
   const recommendations = useKernelQuery(() => fetchRecommendations(DEFAULT_CATEGORY), []);
@@ -97,12 +106,12 @@ export function DiscoverPage() {
       ) : null}
 
       <div className="mt-8 mb-5 flex items-center gap-2 overflow-x-auto">
-        {categoryNames.length > 0 ? (
+        {categoryItems.length > 0 ? (
           <Tabs value={activeCategory} onValueChange={setCategory}>
             <TabsList variant="line" className="h-9">
-              {categoryNames.map((name) => (
-                <TabsTrigger key={name} value={name} className="text-sm">
-                  {name}
+              {categoryItems.map((item) => (
+                <TabsTrigger key={item.id || 'all'} value={item.id} className="text-sm">
+                  {item.name}
                 </TabsTrigger>
               ))}
             </TabsList>

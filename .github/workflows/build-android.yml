@@ -1,0 +1,277 @@
+name: build-android
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 安卓端 CI 构建链（docs/ARCHITECTURE.md §6 矩阵的 core-test + core-lib
+# android/ndk 腿 + android-build 的合体实现；容器无 Java/Android SDK/NDK，
+# APK 只能在 GitHub Actions 构建 —— 这就是本文件存在的理由）。
+#
+# 链路：bridge/go（cgo）→ NDK 交叉编译 → libhncore_android.so
+#       → apps/android/android/app/src/main/jniLibs/arm64-v8a/
+#       → flutter build apk --release（FFI 契约：DuanjuRequest/DuanjuFree，
+#         dart 侧绑定 apps/android/lib/core_bridge.dart，ABI 不得改动）
+#
+# ★ 硬性纪律（教训来自上游 guoapp-android 的 .github/workflows/build.yml 假绿）：
+#   上游把 flutter pub get / dart format / dart analyze / flutter test /
+#   go test -race 全部带 continue-on-error: true，步骤失败也显示绿。
+#   本文件任何步骤【不得】出现 continue-on-error；每步失败必须让 job 红。
+#
+# 本地复现（有 SDK 的机器；容器无 Java/SDK/NDK 只能跑 ① 的替代冒烟）：
+#   # ① 内核 .so（需 NDK 28.2.13676358 = r28c，脚本内部自带版本断言 + ELF/符号校验）
+#   export ANDROID_NDK_HOME=~/Android/Sdk/ndk/28.2.13676358
+#   bash scripts/build-android-core.sh
+#   # ② Dart 门禁
+#   cd apps/android
+#   flutter pub get
+#   flutter analyze          # 冻结基线 106 条（0 error/6 warning/100 info，见 §7 M4）；纯跑会 exit 1
+#   flutter test             # vendored 上游基线含失败用例（见 §7 M4）；纯跑会 exit 1
+#   # ③④ APK
+#   cd android && gradle wrapper --gradle-version 9.3.1   # vendor 状态无 gradlew（被 .gitignore 排除）
+#   cd .. && flutter build apk --release
+#   unzip -l build/app/outputs/flutter-apk/app-release.apk | grep libhncore_android.so
+# ═══════════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'core/**'
+      - 'bridge/**'
+      - 'scripts/build-android-core.sh'
+      - '.github/workflows/build-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # NDK 钉死 r28c。版本号 28.2.13676358 与 vendored 的
+  # apps/android/android/app/build.gradle.kts（ndkVersion = "28.2.13676358"）
+  # 完全一致：Go cgo 交叉编译与 Gradle 打包必须共用同一套 NDK 工具链，
+  # 否则 .so 与 APK 内的其它 native 库会来自不同工具链。
+  # （官方 wiki 实证：r28c ↔ 28.2.13676358；r28c 已转入 unsupported 页，
+  #   但 vendored build.gradle.kts 钉的就是它，未经契约变更不得漂移。）
+  HN_NDK_VERSION: '28.2.13676358'
+  HN_NDK_RELEASE: 'r28c'
+  # API level = minSdk（build.gradle.kts defaultConfig.minSdk = 26），
+  # 决定用 NDK 的哪个 aarch64-linux-android<API>-clang 包装器。
+  HN_ANDROID_API: '26'
+  # Flutter/Dart 钉在 vendor 验证基线（本仓 vendor 时实测：Flutter 3.47.4 stable /
+  # Dart 3.13.3，flutter test 与上游基线零回归；pubspec environment: >=3.12.0 <4.0.0）。
+  HN_FLUTTER_VERSION: '3.47.4'
+  HN_GO_VERSION: '1.24.x'      # docs/ARCHITECTURE.md §6 矩阵（go.mod go 1.24.1）
+  HN_GRADLE_VERSION: '9.3.1'   # gradle-wrapper.properties 的 distributionUrl 一致
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # core CI：§6 矩阵的 core-test（Windows 必跑：boxes.go 字节级操作在 Windows
+  # 的换行/路径/Rename 语义差异会真实咬人）+ 纯 Go 内核对 Android 的交叉编译冒烟。
+  # 门禁形态说明：vendored 代码有 2 个文件不过 gofmt（hls_playlist_detect_test.go、
+  # hongguo_finalize_test.go，B 原样搬入），所以这里不放 gofmt 门禁，只放 vet+test。
+  # ─────────────────────────────────────────────────────────────────────────
+  core-test:
+    name: core-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.HN_GO_VERSION }}
+          cache-dependency-path: core/go.sum
+
+      - name: go vet ./...
+        run: go vet ./...
+
+      # 全部用本地 fixture，禁止联网（§6）；含 vendor 进来的 B 的 27 个测试文件
+      - name: go test -race ./...
+        run: go test -race ./...
+
+      # 纯 Go 内核（core/ 非 cgo）对 Android 的交叉编译冒烟：CGO_ENABLED=0 无需 NDK，
+      # 任何 runner 都能跑。bridge/go 的 cgo 交叉编译需要 NDK，见 android-build ①。
+      - name: android 纯 Go 交叉编译冒烟（CGO_ENABLED=0）
+        if: runner.os == 'Linux'
+        run: |
+          GOOS=android GOARCH=arm64 CGO_ENABLED=0 go build ./...
+          GOOS=android GOARCH=amd64 CGO_ENABLED=0 go build ./...
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # android-build：① NDK 交叉编译 .so → ② Dart 门禁 → ③ Release APK → ④ 上传。
+  # ─────────────────────────────────────────────────────────────────────────
+  android-build:
+    name: android-build (arm64-v8a APK)
+    needs: core-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 工具链：Java（Gradle 9 / AGP 9.1 需要）+ Android SDK（sdkmanager + 许可预受理）
+      # + NDK r28c（钉死，与 vendored build.gradle.kts 的 ndkVersion 一致）
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r28c        # = 28.2.13676358
+          link-to-sdk: true        # AGP 直接命中 $ANDROID_SDK_ROOT/ndk/28.2.13676358，免二次下载
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.HN_GO_VERSION }}
+          cache-dependency-path: core/go.sum
+
+      # ① 用 NDK 交叉编译 bridge/go → libhncore_android.so（android/arm64），
+      #    落到 apps/android/android/app/src/main/jniLibs/arm64-v8a/。
+      #    脚本内部自带：NDK 版本断言（Pkg.Revision 必须等于 28.2.13676358）、
+      #    -buildmode=c-shared、ELF 形态校验（AArch64 + DYN）、
+      #    动态符号表校验（DuanjuRequest / DuanjuFree 必须导出）。
+      #    任一失败即 exit 1 —— job 红。
+      - name: ① NDK 交叉编译 Go 内核 → jniLibs/arm64-v8a/libhncore_android.so
+        run: bash scripts/build-android-core.sh
+        env:
+          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
+
+      # Flutter 工具链：钉在 vendor 验证基线 3.47.4（Dart 3.13.3）
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.HN_FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # gradle wrapper 引导：apps/android/android/.gitignore 排除了 gradlew、
+      # gradlew.bat、gradle-wrapper.jar（vendor 状态没有 wrapper），而
+      # settings.gradle.kts 又要求 local.properties 里有 flutter.sdk ——
+      # 所以先写 local.properties（gitignored，不入仓），再用钉死的 Gradle 9.3.1
+      # 生成 wrapper（与 gradle-wrapper.properties 的 distributionUrl 一致）。
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: 引导 gradle wrapper（vendor 状态无 gradlew；生成物已被 .gitignore 排除）
+        run: |
+          printf 'flutter.sdk=%s\n' "$FLUTTER_ROOT" > android/local.properties
+          gradle wrapper --gradle-version "$HN_GRADLE_VERSION" --distribution-type all
+        working-directory: apps/android/android
+
+      # ② Dart 侧门禁。全部无 continue-on-error：
+      #    pub get 失败 → 红；analyze/test 失败 → 红（对照冻结基线，见步骤内说明）。
+      - name: ② flutter pub get
+        run: flutter pub get
+        working-directory: apps/android
+
+      # analyze 对照冻结基线：vendored 基线为 106 条（0 error / 6 warning / 100 info，
+      # 2026-10-15 于 Flutter 3.47.4 实测；docs/ARCHITECTURE.md §7 M4：
+      # “dart analyze 与上游同为 106 条”，全绿不可达）。
+      # 纯跑 flutter analyze 恒 exit 1 —— 那是基线，不是回归；分级别超出基线
+      # （error>0、warning>6、总数>106）才是回归，必须红。基线只允许被显式调低。
+      - name: ② flutter analyze（对照冻结基线 0error/6warning/106：超出即失败）
+        run: |
+          flutter analyze > analyze.log 2>&1 || true
+          # 防假绿：analyze 崩溃（exit 255 等）时日志里没有任何结论行，
+          # 计数会得 0 —— 必须先断言"产出了结论"，否则按失败处理。
+          if ! grep -qE 'issues found|No issues found' analyze.log; then
+            echo "---- flutter analyze 未产出结论（崩溃/中断），按失败处理 ----"
+            cat analyze.log
+            exit 1
+          fi
+          echo "---- flutter analyze 输出（尾部 30 行）----"
+          tail -30 analyze.log
+          TOTAL=$(grep -cE '^[[:space:]]*(info|warning|error) •' analyze.log || true)
+          ERRORS=$(grep -cE '^[[:space:]]*error •' analyze.log || true)
+          WARNINGS=$(grep -cE '^[[:space:]]*warning •' analyze.log || true)
+          echo "analyzer：error=${ERRORS:-0} / warning=${WARNINGS:-0} / total=${TOTAL:-0}（冻结基线：error 0 / warning 6 / total 106）"
+          if [ "${ERRORS:-0}" -gt 0 ]; then
+            echo "::error::flutter analyze 出现 error 级问题（冻结基线为 0）—— 回归，必须修"
+            exit 1
+          fi
+          if [ "${WARNINGS:-0}" -gt 6 ]; then
+            echo "::error::flutter analyze warning ${WARNINGS} 条超过冻结基线 6 —— 出现基线外新问题"
+            exit 1
+          fi
+          if [ "${TOTAL:-0}" -gt 106 ]; then
+            echo "::error::flutter analyze 共 ${TOTAL} 条，超过冻结基线 106 —— 出现基线外新问题"
+            exit 1
+          fi
+        working-directory: apps/android
+
+      # test 对照冻结失败基线：上游本身有失败用例
+      # （docs/ARCHITECTURE.md §7 M4：“上游本身有 7 个失败用例，全绿不是可达标准”）。
+      # 纯跑 flutter test 恒 exit 1 —— 失败数超过冻结基线 7 才是回归，必须红。
+      # 失败明细始终完整打印，回归与否一目了然。
+      - name: ② flutter test（对照冻结失败基线：超过基线即失败）
+        run: |
+          flutter test > test.log 2>&1 || true
+          # 防假绿：test 崩溃/中断（超时、tool exit 255 等）时日志里没有结论行，
+          # 失败计数会得 0 —— 必须先断言"产出了结论"，否则按失败处理。
+          if ! grep -qE 'All tests passed!|Some tests failed' test.log; then
+            echo "---- flutter test 未产出结论（崩溃/中断），按失败处理 ----"
+            tail -40 test.log
+            exit 1
+          fi
+          echo "---- flutter test 失败明细 ----"
+          grep -E '\[E\]' test.log || echo "（无失败用例）"
+          echo "---- 尾部 15 行 ----"
+          tail -15 test.log
+          FAILS=$(grep -oE ' -[0-9]+:' test.log | tail -1 | grep -oE '[0-9]+' || true)
+          echo "flutter test 失败数=${FAILS:-0}（vendored 上游冻结基线 7，见 ARCHITECTURE.md §7 M4）"
+          if [ "${FAILS:-0}" -gt 7 ]; then
+            echo "::error::flutter test 失败数 ${FAILS} 超过冻结基线 7 —— 出现基线外回归"
+            exit 1
+          fi
+        working-directory: apps/android
+
+      # ③ Release APK。无 key.properties 时按 vendored build.gradle.kts 回退
+      #    debug 签名（可安装、可校验；正式上架前注入真实 keystore）。
+      #    注：内核 .so 只产出 arm64-v8a（步骤 ①），如需 §6.3 的
+      #    app-arm64-v8a.apk 单 ABI 产物，加 --target-platform android-arm64 --split-per-abi。
+      - name: ③ flutter build apk --release
+        run: flutter build apk --release
+        working-directory: apps/android
+
+      # ④ 产物校验 + 上传 APK + 校验和。任何断言失败即红。
+      #    断言 jniLibs 的 libhncore_android.so 真的进了 APK（§6 android-build 的
+      #    “断言 jniLibs 内含 libhncore_android.so”），并校验签名可验。
+      - name: ④ 校验 APK（内核 .so 已装入 + 签名可验）
+        run: |
+          APK="apps/android/build/app/outputs/flutter-apk/app-release.apk"
+          test -s "$APK" || { echo "::error::APK 不存在：$APK"; exit 1; }
+          unzip -l "$APK" | grep -q "lib/arm64-v8a/libhncore_android.so" \
+            || { echo "::error::APK 缺 lib/arm64-v8a/libhncore_android.so —— FFI 内核没有进包"; exit 1; }
+          BT="$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs "$APK" \
+            || { echo "::error::apksigner verify 失败"; exit 1; }
+          echo ">> APK 校验通过"
+          unzip -l "$APK" | grep "libhncore_android.so"
+
+      - name: ④ 生成校验和并上传 artifact
+        run: |
+          APK="apps/android/build/app/outputs/flutter-apk/app-release.apk"
+          mkdir -p dist
+          cp "$APK" dist/hongguo-next-arm64-v8a.apk
+          (cd dist && sha256sum hongguo-next-arm64-v8a.apk > SHA256SUMS.txt)
+          echo ">> SHA256SUMS.txt"
+          cat dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-arm64-v8a
+          path: |
+            dist/hongguo-next-arm64-v8a.apk
+            dist/SHA256SUMS.txt
+          if-no-files-found: error

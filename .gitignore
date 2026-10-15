@@ -25,3 +25,10 @@ __pycache__/
 # 冒烟截图（本地验证产物，不进仓）
 apps/desktop/electron-smoke.png
 apps/desktop/electron-dev-smoke.png
+
+# 崩溃转储（Electron/Go，绝不进仓）
+core
+core.*
+*.core
+!core/
+apps/desktop/core
