@@ -130,16 +130,14 @@ class _PlayerScreenState extends State<PlayerScreen>
   double _aspectRatio = 9 / 16;
   double _resumePosition = 0;
   bool _rotating = false;
-  bool _television = false;
+  // B7c：原 `_television` 状态字段已删除（TV 控制层与 TV 分支全线下线）。
   AppOrientationController? _orientationController;
   bool get _pictureInPictureVisible =>
       _pictureInPictureActive || _pictureInPictureRequested;
   bool get _canUsePictureInPicture =>
-      !_television &&
       defaultTargetPlatform == TargetPlatform.android &&
       _pictureInPictureSupported;
   bool get _mobile =>
-      !_television &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
   VideoEnhancementController? get _enhancementForUi =>
@@ -761,13 +759,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final television = AppLayout.isTelevision(context);
-    if (_television != television) {
-      _fullscreen = false;
-      _automaticFullscreenSuppressed = false;
-      _interactions.cancel();
-    }
-    _television = television;
+    // B7c：原此处同步 `_television = AppLayout.isTelevision(context)`，
+    // 并在形态翻转时重置全屏与手势。TV 下线后该字段与同步逻辑一并删除。
     _orientationController = AppOrientationScope.maybeOf(context);
     final orientation = MediaQuery.orientationOf(context);
     if (_lastOrientation != null && _lastOrientation != orientation) {
@@ -780,7 +773,7 @@ class _PlayerScreenState extends State<PlayerScreen>
 
   void _scheduleSystemUi() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _closed || (!_mobile && !_television)) return;
+      if (!mounted || _closed || !_mobile) return;
       final fullscreen = _showFullscreen;
       if (_systemFullscreen == fullscreen) return;
       _systemFullscreen = fullscreen;
@@ -1051,34 +1044,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         final platform = _player.platform;
         if (platform is NativePlayer) {
           if (Platform.isAndroid) {
-            if (_television) {
-              await platform.setProperty('hwdec', 'mediacodec');
-              await platform.setProperty('hwdec-codecs', 'all');
-              await platform.setProperty('opengl-pbo', 'yes');
-              await platform.setProperty('video-latency-hacks', 'yes');
-              await platform.setProperty('scale', 'bilinear');
-              await platform.setProperty('cscale', 'bilinear');
-              await platform.setProperty('dscale', 'bilinear');
-              await platform.setProperty('correct-downscaling', 'no');
-              await platform.setProperty('vd-lavc-skiploopfilter', 'all');
-              await platform.setProperty('vd-lavc-skipidct', 'all');
-              await platform.setProperty('vd-lavc-threads', '2');
-              await platform.setProperty('demuxer-max-bytes', '${4 * 1024 * 1024}');
-              await platform.setProperty('demuxer-max-back-bytes', '${1 * 1024 * 1024}');
-              await platform.setProperty('demuxer-readahead-secs', '5');
-            } else {
-              // [红果漫剧补丁] 无GPU环境（redroid/部分模拟器）强制软解，真机不受影响
-              // （bool.fromEnvironment('HG_FORCE_SW_DECODE') 仅在冒烟构建时传 true）
-              const forceSw = bool.fromEnvironment('HG_FORCE_SW_DECODE');
-              // mediacodec_copy: 真机硬解到内存（无需 surface，libmpv render 直接消费），
-              // 省电低占用；redroid/模拟器无 mediacodec 服务 → mpv 自动回落软解，无损。
-              // （v0.2.68 的 auto-copy 实测在真机上先试 mediacodec 非copy变体 →
-              //   surface NULL → 放弃硬解回落软解，费电。精确点名 _copy 变体解决。）
-              await platform.setProperty('hwdec', forceSw ? 'no' : 'mediacodec_copy');
-              await platform.setProperty('hwdec-codecs', 'all');
-              await platform.setProperty('vd-lavc-skiploopfilter', 'nonkey');
-              await platform.setProperty('vd-lavc-threads', '4');
-            }
+            // B7c：原 `if (_television) { hwdec/opengl-pbo/video-latency-hacks… }`
+            // —— 那组属性是 TV 盒子（低延迟硬解）专用，随 TV 下线删除。
+            // 非 TV 一直走 media_kit 的默认硬解策略。
             await platform.setProperty('vd-lavc-fast', 'yes');
             await platform.setProperty('video-sync', 'audio');
             await platform.setProperty('framedrop', 'vo');
@@ -1184,7 +1152,6 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   bool get _showFullscreen =>
-      _television ||
       _fullscreen ||
       (_mobile &&
           !_automaticFullscreenSuppressed &&
@@ -1192,7 +1159,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           MediaQuery.orientationOf(context) == Orientation.landscape);
 
   Future<void> _rotate() async {
-    if (_rotating || _television) {
+    if (_rotating) {
       return;
     }
     final fullscreen = !_showFullscreen;
@@ -1213,7 +1180,6 @@ class _PlayerScreenState extends State<PlayerScreen>
             ) ??
             SystemChrome.setPreferredOrientations(
               AppOrientationController.orientations(
-                television: _television,
                 fullscreen: fullscreen,
                 aspectRatio: _aspectRatio,
               ),
@@ -1410,7 +1376,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   // 删掉控制层后已是死代码（非 TV 形态走 `_openPanel` 的底部面板路径）。
 
   void _back() {
-    if (_showFullscreen && !_television) {
+    if (_showFullscreen) {
       _rotate();
     } else {
       Navigator.of(context).maybePop();
@@ -1485,13 +1451,11 @@ class _PlayerScreenState extends State<PlayerScreen>
         await _player.dispose();
       }),
     );
-    if (_mobile || _television && Platform.isAndroid) {
+    if (_mobile) {
       unawaited(
         (_orientationController?.releasePlayback(this) ??
                 SystemChrome.setPreferredOrientations(
-                  AppOrientationController.orientations(
-                    television: _television,
-                  ),
+                  AppOrientationController.orientations(),
                 ))
             .catchError((Object _) {}),
       );
@@ -1503,7 +1467,8 @@ class _PlayerScreenState extends State<PlayerScreen>
   @override
   Widget build(BuildContext context) {
     final inherited = Theme.of(context);
-    final theme = _television ? televisionTheme(inherited) : inherited;
+    // B7c：TV 主题随 TV 下线删除，播放器恒用外层的 AppTheme.dark。
+    final theme = inherited;
     return Theme(
       data: theme,
       child: Builder(
@@ -1527,9 +1492,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     final fullscreen = _showFullscreen;
     final pictureInPicture = _pictureInPictureVisible;
     return PopScope(
-      canPop: _television || !fullscreen,
+      canPop: !fullscreen,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && fullscreen && !_television) {
+        if (!didPop && fullscreen) {
           _rotate();
         }
       },
@@ -1541,17 +1506,15 @@ class _PlayerScreenState extends State<PlayerScreen>
         child: Focus(
           focusNode: _playerFocus,
           onKeyEvent: (_, event) {
-            if (_television ||
-                _panelOpen ||
+            if (_panelOpen ||
                 !_playerFocus.hasPrimaryFocus ||
                 !(ModalRoute.of(context)?.isCurrent ?? true)) {
               return KeyEventResult.ignored;
             }
             return _interactions.key(event);
           },
-          autofocus: !_television,
-          canRequestFocus: !_television,
-          skipTraversal: _television,
+          autofocus: true,
+          canRequestFocus: true,
           child: Scaffold(
             backgroundColor: fullscreen || pictureInPicture
                 ? Colors.black
@@ -1575,7 +1538,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             body: pictureInPicture
                 ? _videoPane(context)
                 : SafeArea(
-                    top: !_television && (fullscreen || _mobile),
+                    top: fullscreen || _mobile,
                     bottom: !fullscreen,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
@@ -1744,7 +1707,7 @@ class _PlayerScreenState extends State<PlayerScreen>
           );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && !_closed) {
-              _enhancement.setViewport(pixels, television: _television);
+              _enhancement.setViewport(pixels);
             }
           });
           return Stack(
@@ -1827,8 +1790,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ),
               if ((_loading || _error != null) &&
                   !hideOverlayForPictureInPicture &&
-                  _showFullscreen &&
-                  !_television)
+                  _showFullscreen)
                 SafeArea(
                   child: Align(
                     alignment: Alignment.topCenter,

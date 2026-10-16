@@ -90,9 +90,7 @@ class _AppBootstrapState extends State<AppBootstrap>
 
   Future<void> _refreshDevice() async {
     final detected = await AppDevice.detect(fallback: device);
-    if (!mounted ||
-        (device.television == detected.television &&
-            device.version == detected.version)) {
+    if (!mounted || device.version == detected.version) {
       return;
     }
     setState(() => device = detected);
@@ -126,9 +124,8 @@ class _AppBootstrapState extends State<AppBootstrap>
           final link = LanController(
             repository,
             store!,
-            kind: device.television
-                ? 'tv'
-                : 'phone',
+            // B7c：原 `device.television ? 'tv' : 'phone'` —— TV 下线后恒为 phone。
+            kind: 'phone',
           );
           LanController.current = link;
           link.openPlayback = (request) async {
@@ -184,7 +181,6 @@ class _AppBootstrapState extends State<AppBootstrap>
     store: store,
     bootstrapError: error?.toString(),
     onRetry: _initialize,
-    television: device.television,
     version: device.version,
     navigatorKey: navigator,
   );
@@ -197,7 +193,6 @@ class DuanjuApp extends StatelessWidget {
     this.store,
     this.bootstrapError,
     this.onRetry,
-    this.television = false,
     this.version = appVersion,
     this.navigatorKey,
     this.playerFactory,
@@ -207,7 +202,6 @@ class DuanjuApp extends StatelessWidget {
   final LocalStore? store;
   final String? bootstrapError;
   final VoidCallback? onRetry;
-  final bool television;
   final String version;
   final GlobalKey<NavigatorState>? navigatorKey;
 
@@ -234,35 +228,21 @@ class DuanjuApp extends StatelessWidget {
     darkTheme: AppTheme.dark,
     themeMode: AppTheme.mode(store?.themeMode ?? 'system'),
     builder: (context, child) {
-      final mode = store?.displayMode ?? 'auto';
-      final tv = mode == 'television' || mode == 'auto' && television;
+      // B7c：原此处按 `displayMode`（auto/television/standard）与设备检测合成
+      // `tv`，再据此启用 TV 主题、TV 方向锁与遥控键绑定。TV 全线下线后，
+      // 这些分支一并删除 —— 形态改由 `HnBreak`（宽 + 朝向）判定，**只有一处**。
+      //
+      // 顺带删掉了 `displayMode` 整条（含 LocalStore 字段与「界面模式」菜单项）：
+      // 保留它会让形态判定同时存在于 `displayMode` 与 `HnBreak` 两处，必然分叉。
       final theme = Theme.of(context);
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: AppTheme.systemBars(theme.brightness),
         child: ColoredBox(
           color: theme.scaffoldBackgroundColor,
           child: AppOrientationScope(
-            television: tv,
             child: AppLayout(
-              television: tv,
               version: version,
-              child: Theme(
-                data: tv ? televisionTheme(theme) : theme,
-                child: Shortcuts(
-                  shortcuts: const {
-                    SingleActivator(
-                      LogicalKeyboardKey.select,
-                      includeRepeats: false,
-                    ): ActivateIntent(),
-                    SingleActivator(
-                      LogicalKeyboardKey.gameButtonA,
-                      includeRepeats: false,
-                    ): ActivateIntent(),
-                    SingleActivator(LogicalKeyboardKey.goBack): DismissIntent(),
-                  },
-                  child: FocusTraversalGroup(child: child!),
-                ),
-              ),
+              child: FocusTraversalGroup(child: child!),
             ),
           ),
         ),

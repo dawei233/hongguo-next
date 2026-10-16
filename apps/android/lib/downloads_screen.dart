@@ -4,14 +4,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_layout.dart';
 import 'core_bridge.dart';
 import 'download_collections.dart';
 import 'local_store.dart';
 import 'local_media_screen.dart';
 import 'models.dart';
 import 'player_screen.dart';
-import 'remote_widgets.dart';
 import 'settings_screen.dart';
 import 'widgets.dart';
 
@@ -140,7 +138,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
           ),
           actions: [
             TextButton(
-              autofocus: AppLayout.isTelevision(context),
+              // B7c：TV 遥控自动聚焦随 TV 下线删除。
               onPressed: () => Navigator.pop(context, false),
               child: const Text('保留'),
             ),
@@ -423,7 +421,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     ),
   ];
 
-  Widget _collection(DownloadCollection collection, bool television) {
+  Widget _collection(DownloadCollection collection) {
     final count = collection.jobs
         .where((job) => _selected.contains(job.id))
         .length;
@@ -486,16 +484,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         ),
       ),
     );
-    if (!television) return card;
-    // TV：合集标题本身要能拿到焦点并用「确认」键展开/收起，否则遥控器
-    // 无法进入分集列表。
-    return RemoteTarget(
-      label: collection.drama.title,
-      selected: expanded,
-      autofocus: false,
-      onPressed: toggle,
-      child: card,
-    );
+    // B7c：原 `if (!television) return card; return RemoteTarget(...)` ——
+    // TV 用 `RemoteTarget` 让合集标题可聚焦（遥控展开/收起）。删 TV 后
+    // 合集标题的展开/收起由卡片自身的 `InkWell`（见上方 `card`）承担。
+    return card;
   }
 
   /// 分集可执行的操作（命令, 文案），弹出的下拉菜单和 TV 操作面板共用，
@@ -513,30 +505,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     ('remove', job.completed ? '删除视频' : '取消下载'),
   ];
 
-  Future<void> _episodeSheet(DownloadJob job) async {
-    final actions = _episodeActions(job);
-    if (actions.isEmpty) return;
-    final value = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${job.drama.title} · 第 ${job.episode.number} 集'),
-        content: Text(
-          '${job.archived ? '已保留视频' : job.stateLabel} · ${storageSize(job.bytes)}'
-          '${job.actualQuality > 0 ? ' · ${job.actualQuality}P' : ''}',
-        ),
-        actions: [
-          for (final (index, action) in actions.indexed)
-            TextButton(
-              autofocus: index == 0,
-              onPressed: () => Navigator.pop(context, action.$1),
-              child: Text(action.$2),
-            ),
-        ],
-      ),
-    );
-    if (value == null || !mounted) return;
-    _runEpisodeAction(job, value);
-  }
+  // B7c：原 `_episodeSheet()` 已删除 —— 它唯一的调用者是 TV 的 `RemoteTarget`
+  // 整行面板（删 TV 时一并移除）。分集操作改由右侧 `PopupMenuButton` 承担，
+  // 最终都走到同一个 `_runEpisodeAction`，能力无损失。
 
   void _runEpisodeAction(DownloadJob job, String value) {
     if (value == 'play') {
@@ -546,7 +517,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     }
   }
 
-  Widget _episode(DownloadJob job, bool television) {
+  Widget _episode(DownloadJob job) {
     final actions = _episodeActions(job);
     final card = Card(
       key: ValueKey('download-task-${job.id}'),
@@ -581,10 +552,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                 ? () => _play(job)
                 : null,
             trailing: _selecting
-                // TV：下拉菜单不可用，改由整行的操作面板承载，所以这里不再
-                // 渲染第二个可聚焦控件，保证「上下」键一格就是下一集。
-                ? null
-                : television
                 ? null
                 : PopupMenuButton<String>(
                     enabled: !_busy,
@@ -604,13 +571,10 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
         ],
       ),
     );
-    final row = Padding(padding: const EdgeInsets.only(left: 12), child: card);
-    if (!television) return row;
-    return RemoteTarget(
-      label: '${job.drama.title} · 第 ${job.episode.number} 集',
-      onPressed: _busy ? null : () => _episodeSheet(job),
-      child: row,
-    );
+    // B7c：原 `if (!television) return row; return RemoteTarget(...)` ——
+    // TV 用 `RemoteTarget` 承载整行的操作面板；删 TV 后分集操作走右侧的
+    // `PopupMenuButton`（非 TV 一直如此），能力无损失。
+    return Padding(padding: const EdgeInsets.only(left: 12), child: card);
   }
 
   Widget _batchBar() => Material(
@@ -666,8 +630,6 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       return const StatusPanel(title: '当前用户无权访问下载', message: '请返回后重新操作。');
     }
     final collections = _collections;
-    // 列表项是懒构建的，不能在 itemBuilder 里查 InheritedWidget。
-    final television = AppLayout.isTelevision(context);
     final rows = <Object>[
       for (final collection in collections) ...[
         collection,
@@ -766,9 +728,8 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                   itemBuilder: (_, index) => switch (rows[index]) {
                     DownloadCollection collection => _collection(
                       collection,
-                      television,
                     ),
-                    DownloadJob job => _episode(job, television),
+                    DownloadJob job => _episode(job),
                     _ => const SizedBox.shrink(),
                   },
                 ),

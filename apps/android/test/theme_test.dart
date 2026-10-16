@@ -118,9 +118,9 @@ void main() {
     await tester.pumpAndSettle();
     // 标题实际渲染为「我的追剧 · N」，用精确匹配永远命中不到。
     expect(find.textContaining('我的追剧'), findsOneWidget);
-    await tester.tap(find.byTooltip('更多'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('设置与备份'));
+    // B9：设置原先还藏在「更多」溢出菜单里（与新设置页重复的入口），
+    // 现已删除 —— 设置只剩底栏「设置」这一个入口。
+    await tester.tap(find.byKey(const ValueKey('bottom-nav-2')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('theme-setting')));
     await tester.pumpAndSettle();

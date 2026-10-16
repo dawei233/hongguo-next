@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'app_layout.dart';
 import 'models.dart';
 import 'ui/layout.dart';
 import 'remote_widgets.dart';
@@ -214,7 +213,6 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
     _page = _page.clamp(0, max(0, (widget.episodes.length - 1) ~/ pageSize));
     final start = _page * pageSize;
     final visible = widget.episodes.skip(start).take(pageSize).toList();
-    final television = AppLayout.isTelevision(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -247,9 +245,11 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
               // 整屏宽排布，且要照顾集号位数与系统文字缩放。
               final columns = widget.compact
                   ? HnBreak.episodeSidebarColumns
+                  // B7c：原 `max(television ? 100 : 82, ...)` ——
+                  // TV 档 100（格子更大）随 TV 下线删除，恒取非 TV 档 82。
                   : ((constraints.maxWidth - 36) /
                             max(
-                              television ? 100 : 82,
+                              82,
                               scale.scale(20) * digits * .65 + 40,
                             ))
                         .floor()
@@ -284,7 +284,9 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
               return RemoteGrid(
                 key: ValueKey('episode-page-$_page-$_located'),
                 controller: _scroll,
-                autofocus: television && _located != null,
+                // B7c：原 `autofocus: television && _located != null` ——
+                // 非 TV 一直是 false（触摸不需要初始焦点），删除后行为不变。
+                autofocus: false,
                 initialIndex: target,
                 itemKeys: visible
                     .map((episode) => '${episode.number}')
@@ -368,7 +370,6 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
 
   Widget _continuousGrid(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final television = AppLayout.isTelevision(context);
       // §4.2.2（B5）：**播放器选集侧栏内固定 4 列 × 44px**。
       //
       // 这里原先是 compact 专用的一套算术
@@ -409,7 +410,8 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
             child: RemoteGrid(
               key: ValueKey('episode-continuous-$_located'),
               controller: _scroll,
-              autofocus: television && _located != null,
+              // B7c：同 `_continuousGrid`，非 TV 一直是 false。
+              autofocus: false,
               initialIndex: target,
               itemKeys: widget.episodes
                   .map((episode) => '${episode.number}')

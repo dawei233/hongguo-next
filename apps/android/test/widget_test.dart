@@ -18,11 +18,9 @@ void main() {
   DuanjuApp app(
     AppRepository repository, {
     LocalStore? store,
-    bool television = false,
   }) => DuanjuApp(
     repository: repository,
     store: store,
-    television: television,
     playerFactory: () => Player(platformPlayer: ScriptedPlayer()),
     videoBuilder: (controls) => controls,
   );

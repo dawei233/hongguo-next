@@ -215,7 +215,9 @@ void main() {
         );
       }
       await tester.pumpWidget(
-        DuanjuApp(repository: repository, store: store, television: layout.$3),
+        // B7c：原 `television: layout.$3` —— TV 形态已下线，960×540 这条
+        // 现在只考「宽屏（≥840）布局下海报对齐」，不再挂 TV 标志。
+        DuanjuApp(repository: repository, store: store),
       );
       await tester.pumpAndSettle();
       Size? catalogSize;

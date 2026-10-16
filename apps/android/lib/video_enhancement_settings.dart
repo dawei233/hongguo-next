@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'remote_widgets.dart';
 import 'video_enhancement.dart';
 import 'video_enhancement_preferences.dart';
 
@@ -10,14 +9,12 @@ class VideoEnhancementSettings extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     required this.onCompare,
-    this.television = false,
     this.busy = false,
   });
 
   final VideoEnhancementController controller;
   final ValueChanged<VideoEnhancementPreferences> onChanged;
   final VoidCallback onCompare;
-  final bool television;
   final bool busy;
 
   Widget _choice({
@@ -26,19 +23,14 @@ class VideoEnhancementSettings extends StatelessWidget {
     required bool selected,
     required VoidCallback action,
     bool enabled = true,
-  }) => television
-      ? RemoteButton(
-          key: ValueKey(id),
-          label: label,
-          selected: selected,
-          onPressed: busy || !enabled ? null : action,
-        )
-      : ChoiceChip(
-          key: ValueKey(id),
-          label: Text(label),
-          selected: selected,
-          onSelected: busy || !enabled ? null : (_) => action(),
-        );
+    // B7c：原 `television ? RemoteButton(...) : ChoiceChip(...)` ——
+    // TV 用可聚焦的 `RemoteButton`。删 TV 后恒用 ChoiceChip。
+  }) => ChoiceChip(
+    key: ValueKey(id),
+    label: Text(label),
+    selected: selected,
+    onSelected: busy || !enabled ? null : (_) => action(),
+  );
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -57,7 +49,7 @@ class VideoEnhancementSettings extends StatelessWidget {
         children: [
           Text(
             '画质增强',
-            style: television ? const TextStyle(fontSize: 18) : null,
+            // B7c：原 TV 放大字号（18）随 TV 下线删除。
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -115,15 +107,9 @@ class VideoEnhancementSettings extends StatelessWidget {
               Text(controller.detail, style: helperStyle),
             ],
             const SizedBox(height: 8),
-            if (television)
-              RemoteButton(
-                key: const ValueKey('enhancement-compare'),
-                label: controller.comparing ? '恢复增强' : '原画对比',
-                icon: Icons.compare_rounded,
-                onPressed: controller.canCompare && !busy ? onCompare : null,
-              )
-            else
-              OutlinedButton.icon(
+            // B7c：原 `television ? RemoteButton(...) : OutlinedButton.icon(...)`
+            // —— TV 用可聚焦的 `RemoteButton`。删 TV 后恒用 OutlinedButton。
+            OutlinedButton.icon(
                 key: const ValueKey('enhancement-compare'),
                 onPressed: controller.canCompare && !busy ? onCompare : null,
                 icon: const Icon(Icons.compare_rounded),

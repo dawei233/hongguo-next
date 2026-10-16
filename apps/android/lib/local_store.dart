@@ -376,10 +376,9 @@ class LocalStore extends ChangeNotifier {
 
   bool get hideVip =>
       _configurationError == null ? _bool(_key('hideVip')) ?? true : true;
-  String get displayMode {
-    final value = _configurationError == null ? _string('displayMode') : null;
-    return {'auto', 'television', 'standard'}.contains(value) ? value! : 'auto';
-  }
+  // B7c：`displayMode`（auto/television/standard）已整条删除 —— 它是 TV 检测的
+  // 手动覆盖。TV 下线后形态由 `HnBreak`（宽 + 朝向）判定；若保留它，
+  // 形态判定会同时存在于两处（displayMode + HnBreak），必然分叉。
 
   String get themeMode {
     final value = _configurationError == null ? _string('themeMode') : null;
@@ -560,10 +559,6 @@ class LocalStore extends ChangeNotifier {
     return _setting(_key('source'), value);
   }
 
-  Future<void> setDisplayMode(String value) =>
-      {'auto', 'television', 'standard'}.contains(value)
-      ? _setting('displayMode', value)
-      : Future.value();
   Future<void> setThemeMode(String value) =>
       {'light', 'dark', 'system'}.contains(value)
       ? _setting('themeMode', value)
@@ -1012,7 +1007,6 @@ class LocalStore extends ChangeNotifier {
       'schema': 1,
       'app': 'zhenguojian',
       'profiles': _profiles.map((profile) => profile.toJson()).toList(),
-      'displayMode': displayMode,
       'themeMode': themeMode,
       'autoExport': autoExport,
       'exportPosters': exportPosters,
@@ -1136,10 +1130,6 @@ class LocalStore extends ChangeNotifier {
         profiles.map((profile) => profile.toJson()).toList(),
       ),
       'activeProfile': profiles.firstWhere((profile) => profile.admin).id,
-      'displayMode':
-          {'auto', 'television', 'standard'}.contains(data['displayMode'])
-          ? data['displayMode'] as String
-          : 'auto',
       'themeMode': data['themeMode'] as String? ?? themeMode,
       'autoExport': data['autoExport'] == true,
       'exportPosters': data['exportPosters'] == true,

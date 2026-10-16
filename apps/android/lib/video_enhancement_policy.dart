@@ -127,7 +127,6 @@ VideoEnhancementDecision chooseVideoEnhancement({
   required Size viewport,
   required bool ready,
   required bool android,
-  required bool television,
   required bool gpu,
   required bool luma,
   required bool hardware,
@@ -142,9 +141,8 @@ VideoEnhancementDecision chooseVideoEnhancement({
   if (preferences.mode == VideoEnhancementMode.off) {
     return const VideoEnhancementDecision(original, null, '画质增强已关闭');
   }
-  if (television) {
-    return const VideoEnhancementDecision(original, null, '电视端原生硬件直通，确保极速流畅');
-  }
+  // B7c：原 `if (television) return ... '电视端原生硬件直通'` 已删除 ——
+  // TV 端不再受支持，策略只按 android/设备能力判定。
   final source = videoDisplaySize(parameters);
   if (!ready ||
       source == null ||
@@ -169,8 +167,8 @@ VideoEnhancementDecision chooseVideoEnhancement({
     viewport.width / source.width,
     viewport.height / source.height,
   );
-  final maxPixels = android || television ? 2073600.0 : 8294400.0;
-  final maxDimension = android || television ? 4096.0 : 8192.0;
+  final maxPixels = android ? 2073600.0 : 8294400.0;
+  final maxDimension = android ? 4096.0 : 8192.0;
   final scale = math.min(
     targetScale,
     math.min(
@@ -228,7 +226,7 @@ VideoEnhancementDecision chooseVideoEnhancement({
   if (pixels <= 0) return scaling;
   final limit = math.min(
     costLimit,
-    television || power.lowMemory || android ? 2 : 4,
+    power.lowMemory || android ? 2 : 4,
   );
   bool allowed(VideoEnhancementBackend backend) =>
       backend.cost <= limit && !rejected.contains(backend);

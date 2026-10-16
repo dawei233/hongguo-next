@@ -1,6 +1,5 @@
 import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/main.dart';
-import 'package:hongguo_next/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,7 +23,9 @@ void main() {
         DuanjuApp(
           repository: repository,
           store: store,
-          television: true,
+          // B7c：原 `television: true` —— 本用例测的是**站源密码门控**
+          // （`sourceGateOff` 开/关时站源列表差异），与 TV 无关，
+          // 只是当初借 TV 宿主来跑。TV 下线后改为普通形态挂载。
           playerFactory: () => Player(platformPlayer: ScriptedPlayer()),
           videoBuilder: (controls) => controls,
         ),

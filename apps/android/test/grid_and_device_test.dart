@@ -1,30 +1,13 @@
 import 'package:hongguo_next/app_layout.dart';
-import 'package:hongguo_next/models.dart';
 import 'package:hongguo_next/remote_widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'fixtures.dart';
 
-class TelevisionRepository extends FixtureRepository {
-  @override
-  Future<DramaDetail> detail(Drama drama) async {
-    detailCalls++;
-    return DramaDetail(
-      drama,
-      List.generate(
-        100,
-        (index) => Episode({
-          'id': '${index + 1}',
-          'currentEpisode': index + 1,
-          'vip': true,
-        }, index + 1),
-      ),
-    );
-  }
-}
+// B7c：原 `TelevisionRepository`（给 TV 遥控用例造 100 集）已删除 ——
+// 它的唯一使用者是已下线的 TV 用例。
 
 void main() {
   // B7b：`makeStore` 随其唯一使用者（TV 遥控用例）一并删除。
@@ -57,16 +40,18 @@ void main() {
       );
       messenger.setMockMethodCallHandler(AppDevice.channel, (call) async {
         expect(call.method, 'deviceInfo');
-        return {'television': true, 'version': appVersion};
+        // B7c：TV 检测已删除，只保留 version（关于页与局域网在用）。
+        return {'version': appVersion};
       });
       final detected = await AppDevice.detect();
-      expect(detected.television, isTrue);
+
       expect(detected.version, appVersion);
       messenger.setMockMethodCallHandler(
         AppDevice.channel,
         (call) async => throw MissingPluginException(),
       );
-      expect((await AppDevice.detect()).television, isFalse);
+      // B7c：MissingPluginException 时回退到 fallback（version 保留）。
+      expect((await AppDevice.detect()).version, isNotEmpty);
       debugDefaultTargetPlatformOverride = null;
     },
   );

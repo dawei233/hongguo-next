@@ -14,6 +14,7 @@ import 'profiles_screen.dart';
 import 'app_build.dart';
 import 'sources_screen.dart';
 import 'ui/components/hn_settings_group.dart';
+import 'app_layout.dart';
 import 'ui/layout.dart';
 import 'ui/tokens.dart';
 import 'widgets.dart';
@@ -288,6 +289,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       (
         '关于',
         <Widget>[
+          // B9：从遗留溢出菜单迁入的「关于」对话框（原先唯一入口在
+          // `home_screen` 的「更多」菜单里）。**迁入后才删旧入口** ——
+          // 否则用户再也看不到版本号（"只删不搬"）。
+          ListTile(
+            key: const ValueKey('about-setting'),
+            leading: const Icon(Icons.info_outline_rounded),
+            title: const Text('关于'),
+            subtitle: Text('$appName ${AppLayout.versionOf(context)}'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => showAboutDialog(
+              context: context,
+              applicationName: appName,
+              applicationVersion: AppLayout.versionOf(context),
+              applicationIcon: const Icon(
+                Icons.play_circle_filled_rounded,
+                size: 48,
+                color: Color(0xFFFF765F),
+              ),
+              children: [
+                const Text('独立运行，打开即可浏览和播放。观看记录与追剧收藏保存在当前设备。'),
+              ],
+            ),
+          ),
           if (widget.store.profile.admin) ...[
             ListTile(
               leading: const Icon(Icons.settings_ethernet_rounded),

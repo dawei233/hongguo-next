@@ -8,44 +8,12 @@ export 'app_build.dart';
 
 const appVersion = '0.3.2';
 
-ThemeData televisionTheme(ThemeData theme) {
-  final colors = theme.colorScheme;
-  final focusSide = WidgetStateProperty.resolveWith<BorderSide?>(
-    (states) => states.contains(WidgetState.focused)
-        ? BorderSide(color: colors.primary, width: 3)
-        : null,
-  );
-  final focusBackground = WidgetStateProperty.resolveWith<Color?>(
-    (states) =>
-        states.contains(WidgetState.focused) ? colors.primaryContainer : null,
-  );
-  final button = ButtonStyle(
-    side: focusSide,
-    minimumSize: const WidgetStatePropertyAll(Size(52, 48)),
-    textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 17)),
-  );
-  return theme.copyWith(
-    focusColor: colors.primaryContainer,
-    iconButtonTheme: IconButtonThemeData(
-      style: button.copyWith(backgroundColor: focusBackground),
-    ),
-    filledButtonTheme: FilledButtonThemeData(style: button),
-    outlinedButtonTheme: OutlinedButtonThemeData(style: button),
-    textButtonTheme: TextButtonThemeData(
-      style: button.copyWith(backgroundColor: focusBackground),
-    ),
-    inputDecorationTheme: theme.inputDecorationTheme.copyWith(
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: colors.primary, width: 3),
-      ),
-    ),
-  );
-}
+// B7c：`televisionTheme()` 已删除 —— 它给 TV 放大的焦点边框（3px）、
+// 最小 52×48 的按钮与 17 号字。TV 下线后全应用只用 `AppTheme.light/dark`。
+
 
 class AppDevice {
-  const AppDevice({this.television = false, this.version = appVersion});
-  final bool television;
+  const AppDevice({this.version = appVersion});
   final String version;
   static const channel = MethodChannel('duanju/device');
 
@@ -59,11 +27,10 @@ class AppDevice {
       final data = await channel
           .invokeMapMethod<String, dynamic>('deviceInfo')
           .timeout(const Duration(seconds: 2));
-      final television = data?['television'];
-      if (television is! bool) return fallback;
+      // B7c：原先这里还会读 `data['television']` 做 TV 检测，随 TV 下线删除。
+      // 保留 `version` —— 关于页与局域网设备互联仍在用。
       final version = data?['version'];
       return AppDevice(
-        television: television,
         version: version is String && version.isNotEmpty
             ? version
             : fallback.version,
@@ -130,21 +97,19 @@ class AppDevice {
 class AppLayout extends InheritedWidget {
   const AppLayout({
     super.key,
-    required this.television,
     this.version = appVersion,
     required super.child,
   });
-  final bool television;
   final String version;
 
-  static bool isTelevision(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<AppLayout>()?.television ??
-      false;
+  /// B7c：原 `static bool isTelevision(BuildContext)` 已删除 —— 它读取本
+  /// InheritedWidget 的 `television` 字段（设备级 TV 标志）。TV 全线下线后
+  /// 形态判定统一由 `HnBreak.formOf`（宽 + 朝向）承担，**只有一处**。
   static String versionOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<AppLayout>()?.version ??
       appVersion;
 
   @override
   bool updateShouldNotify(AppLayout oldWidget) =>
-      television != oldWidget.television || version != oldWidget.version;
+      version != oldWidget.version;
 }

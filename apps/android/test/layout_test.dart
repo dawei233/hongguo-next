@@ -88,7 +88,8 @@ void main() {
     });
 
     test('未传 screenWidth 时退化为用 width 判形态（TV 整屏宽路径）', () {
-      // home_screen 的 _televisionGrid 走这条：它拿到的是整屏宽（无左轨扣减）。
+      // B7c：原 TV 网格（_televisionGrid）已删除；此处的 landscape/screenWidth
+      // 口径保留 —— 平板横屏（无左轨扣减时）仍按同一公式判定。
       expect(HnBreak.posterColumns(1112, landscape: true), 6);
     });
   });

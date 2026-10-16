@@ -114,25 +114,10 @@ void main() {
         reason: '左轨「最近」连点 6 次也应开门（两条导航路径都要接）');
   });
 
-  testWidgets('B7b：TV 侧边栏已下线，TV 形态改用统一导航轨', (tester) async {
-    tester.view.physicalSize = const Size(960, 540);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    SharedPreferences.setMockInitialValues({});
-    final store = testStore(await SharedPreferences.getInstance());
-    addTearDown(store.dispose);
-    await tester.pumpWidget(
-      DuanjuApp(repository: FixtureRepository(), store: store, television: true),
-    );
-    await tester.pumpAndSettle();
-    // B7b：TV 专用的 164px 侧边栏（`tv-nav-N`）已删除。
-    // 本用例原意是"锁住 TV 边界、防止顺手统一"，**该边界现已随 B7b 正式拆除**，
-    // 故断言改为反映新现实：TV 形态下不再有 `tv-nav-N`，
-    // 而是回落到与平板共用的 `HnNavigationRail`（§5.2 的统一目标）。
-    expect(find.byKey(const ValueKey('tv-nav-0')), findsNothing);
-    expect(find.byKey(const ValueKey('tv-nav-1')), findsNothing);
-  });
+  // B7c：原「TV 侧边栏已下线，TV 形态改用统一导航轨」用例已删除 ——
+  // TV 相关代码已**全部**清理（`AppLayout.television` / `AppDevice.television` /
+  // `displayMode` / TV 侧边栏 / 遥控组件），不再存在需要锁的 TV 边界。
+
 
   // ⚠ 这条是为一个**真实回归**补的守卫（B7b 时由分析器 unused_element 暴露）：
   //

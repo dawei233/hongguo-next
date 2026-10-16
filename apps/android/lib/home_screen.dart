@@ -7,7 +7,6 @@ import 'package:media_kit/media_kit.dart';
 import 'app_layout.dart';
 import 'app_build.dart';
 import 'core_bridge.dart';
-import 'catalog_filters.dart';
 import 'catalog_browser.dart';
 import 'catalog_sort.dart';
 import 'catalog_sort_sheet.dart';
@@ -27,9 +26,7 @@ import 'ui/components/hn_segmented_tabs.dart';
 import 'ui/layout.dart';
 import 'ui/tokens.dart';
 import 'widgets.dart';
-import 'vip_icon.dart';
 import 'settings_screen.dart';
-import 'profiles_screen.dart';
 import 'search_input.dart';
 import 'source_gate_dialog.dart';
 import 'source_gate_taps.dart';
@@ -99,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late final CatalogBrowser _browser;
   bool _searchVisible = false;
   bool _categoriesLoading = false;
-  String? _categoriesError;
   int _categoryGeneration = 0;
   late final LibraryUpdater _updater;
   final _changedSources = <String>{};
@@ -235,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final group = _group;
     setState(() {
       _categoriesLoading = true;
-      _categoriesError = null;
     });
     final error = await _browser.loadCategories(
       group,
@@ -249,7 +244,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     setState(() {
       _categoriesLoading = false;
-      _categoriesError = error;
     });
     if (!_showRecommendations &&
         _category.isNotEmpty &&
@@ -466,54 +460,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _chooseDisplayMode() async {
-    final selection = await showDialog<String>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('界面模式'),
-        children: [
-          RadioGroup<String>(
-            groupValue: widget.store.displayMode,
-            onChanged: (value) => Navigator.pop(context, value),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final mode in const {
-                  'auto': '自动识别设备',
-                  'television': '电视 / 遥控器',
-                  'standard': '手机 / 电脑',
-                }.entries)
-                  RadioListTile<String>(
-                    value: mode.key,
-                    autofocus: mode.key == widget.store.displayMode,
-                    title: Text(mode.value),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    if (selection != null && mounted) {
-      await saveUserChange(
-        context,
-        () => widget.store.setDisplayMode(selection),
-      );
-    }
-  }
+  // B7c：原 `_chooseDisplayMode()`（「界面模式」对话框：自动/电视/手机电脑）
+  // 已整条删除 —— 它是 TV 检测的手动覆盖，TV 下线后形态统一由 `HnBreak` 判定。
 
   // B7b：原 `_televisionSearch()`（TV 搜索对话框）已删，见 `_toggleSearch` 说明。
 
-  void _televisionBack() {
-    if (_selectionMode) {
-      _cancelSelection();
-    } else if (_tab != 0) {
-      setState(() => _tab = 0);
-    } else if (_search.text.isNotEmpty) {
-      _search.clear();
-      _searchChanged('');
-    }
-  }
+  // B7c：原 `_televisionBack()`（遥控返回键：退选集 → 回发现 → 清搜索）已删除
+  // —— 它的唯一调用者是 TV 的 PopScope，随 TV 下线一并删除。
+  // 非 TV 的返回由系统返回键 / BackButton 正常处理。
 
   @override
   void initState() {
@@ -1033,7 +987,6 @@ class _HomeScreenState extends State<HomeScreen> {
     animation: widget.store,
     builder: (context, _) => LayoutBuilder(
       builder: (context, constraints) {
-        final television = AppLayout.isTelevision(context);
         final desktop = constraints.maxWidth >= 840;
         // §2.1（B3）：形态判定只认「宽 + 朝向」，供左轨变体与底栏显隐使用。
         // 注意它与上方 `desktop`（840 阈值，历史遗留）**并存**：本批不挪
@@ -1042,7 +995,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final railForm = HnBreak.formOf(constraints.biggest);
         final scaffold = Scaffold(
           appBar: AppBar(
-            toolbarHeight: television ? 64 : null,
+            // B7c：TV 加高 appbar 随 TV 下线删除，用平台默认高度。
             titleSpacing: 12,
             title: _selectionMode
                 ? const Text(
@@ -1174,43 +1127,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   onSelected: (value) {
                     if (value == 'update') {
                       _refreshCatalog();
-                    } else if (value == 'sources') {
-                      _manageSources();
-                    } else if (value == 'settings') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => SettingsScreen(
-                            repository: widget.repository,
-                            store: widget.store,
-                          ),
-                        ),
-                      );
-                    } else if (value == 'users') {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => ProfilesScreen(store: widget.store),
-                        ),
-                      );
-                    } else if (value == 'display') {
-                      _chooseDisplayMode();
-                    } else if (value == 'about') {
-                      showAboutDialog(
-                        context: context,
-                        applicationName: appName,
-                        applicationVersion: AppLayout.versionOf(context),
-                        applicationIcon: const Icon(
-                          Icons.play_circle_filled_rounded,
-                          size: 48,
-                          color: Color(0xFFFF765F),
-                        ),
-                        children: [
-                          const Text('独立运行，打开即可浏览和播放。观看记录与追剧收藏保存在当前设备。'),
-                        ],
-                      );
                     }
                   },
+                  // B9：本菜单原先还有 站源管理 / 用户管理 / 设置与备份 /
+                  // 界面模式 / 关于 五项 —— 它们都是**设置页已有的重复入口**
+                  // （"同一件事两处"）。现只留下「更新剧库」：
+                  // 它是**内容操作**（拉取发现页数据），不是设置项。
+                  //
+                  // 关于对话框已**先**迁入设置页「关于」组再删旧入口；
+                  // 界面模式随 `displayMode` 整条删除。
                   itemBuilder: (_) => [
                     if (_tab == 0 &&
                         !_showRecommendations &&
@@ -1224,21 +1149,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                         child: const Text('更新剧库'),
                       ),
-                    if (widget.repository.supportsSourceManagement)
-                      const PopupMenuItem(
-                        value: 'sources',
-                        child: Text('站源管理'),
-                      ),
-                    const PopupMenuItem(value: 'users', child: Text('用户管理')),
-                    const PopupMenuItem(
-                      value: 'settings',
-                      child: Text('设置与备份'),
-                    ),
-                    const PopupMenuItem(value: 'display', child: Text('界面模式')),
-                    const PopupMenuItem(
-                      value: 'about',
-                      child: Text('关于$appName'),
-                    ),
                   ],
                 ),
               ],
@@ -1268,11 +1178,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     destinations: _railDestinations,
                   ),
                 ],
-                Expanded(child: _content(desktop: desktop, television: television)),
+                Expanded(child: _content(desktop: desktop)),
               ],
             ),
           ),
-          bottomNavigationBar: desktop || television
+          bottomNavigationBar: desktop
               ? null
               : _selectionMode
               ? _selectionBar()
@@ -1287,42 +1197,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   destinations: _bottomDestinations,
                 ),
         );
-        if (!television && !_selectionMode) return scaffold;
-        return PopScope(
-          canPop:
-              !_selectionMode &&
-              (!television || _tab == 0 && _search.text.isEmpty),
-          onPopInvokedWithResult: (didPop, result) {
-            if (!didPop) _televisionBack();
-          },
-          child: CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.escape): () =>
-                  Navigator.of(context).maybePop(),
-              const SingleActivator(LogicalKeyboardKey.goBack): () =>
-                  Navigator.of(context).maybePop(),
-            },
-            child: scaffold,
-          ),
-        );
+        // B7c：原 TV 形态会再套一层 `PopScope + CallbackShortcuts`（遥控返回键
+        // 与音量键拦截），随 TV 下线整块删除；各形态直接返回 scaffold。
+        return scaffold;
       },
     ),
   );
 
   /// 内容区（§3.2 的新 IA）。
   ///
-  /// 非 TV 时，「我的」页顶部有一条三分段（追剧 / 最近 / 下载）——
+  /// 「我的」页顶部有一条三分段（追剧 / 最近 / 下载）——
   /// 上游把这三者做成三个平级 tab，现在收进一个目的地 + 分段。
-  /// **TV 不套分段**：TV 侧边栏仍直接列 4 项（`_tab` 语义），
-  /// 保持原样以免动到 16 个 TV 用例。
-  Widget _content({required bool desktop, required bool television}) {
+  ///
+  /// B7c：原签名还有 `required bool television`（TV 不套分段壳），随 TV 下线删除。
+  Widget _content({required bool desktop}) {
     final body = switch (_tab) {
       0 => widget.store.sources.isEmpty
           ? const StatusPanel(
               title: '暂无可用站源',
               message: '请联系管理员为当前用户开放站源。',
             )
-          : _catalog(selectionInBody: desktop || television),
+          : _catalog(selectionInBody: desktop),
       3 => DownloadsScreen(
         repository: widget.repository,
         store: widget.store,
@@ -1340,7 +1235,7 @@ class _HomeScreenState extends State<HomeScreen> {
             : null,
       ),
     };
-    if (television || _tab == 0 || _selectionMode) return body;
+    if (_tab == 0 || _selectionMode) return body;
     // 「我的」页：顶部分段（§5.1 第 2 条）+ 下方对应列表。
     return Column(
       children: [
@@ -1399,10 +1294,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _catalog({required bool selectionInBody}) {
     final items = _visible;
-    final television = AppLayout.isTelevision(context);
     return Column(
       children: [
-        if (_searchVisible && !television)
+        // B7c：原 `if (_searchVisible && !television)` —— TV 形态不显示搜索框
+        // （改用遥控搜索对话框，已随 B7b 删除）。删 TV 后恒按 `_searchVisible`。
+        if (_searchVisible)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: SearchInput(
@@ -1455,38 +1351,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-        // §4.1.1（B2）：非 TV 首屏**不再常驻分类 chip 行** —— 分类选择已并入
+        // §4.1.1（B2）：首屏**不常驻分类 chip 行** —— 分类选择已并入
         // 右上 `⇅` 的筛选 Sheet（`_chooseCatalogView`），首屏让位给内容流。
         //
-        // TV 保留常驻 chip 行：TV 是遥控交互，chip 行是可聚焦的目标，
-        // 收进 Sheet 反而增加遥控步数；且 TV 不在本次范围。
-        if (television)
-          CatalogFilters(
-            key: ValueKey('filters-${_group.id}'),
-            categories: _displayCategories,
-            category: _displayCategory,
-            error: _categoriesError,
-            onCategory: _changeCategory,
-            onRetry: () => _loadCategories(force: true),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_supportsVipFilter)
-                  IconButton(
-                    tooltip: widget.store.hideVip ? 'VIP：隐藏' : 'VIP：显示',
-                    onPressed: () => saveUserChange(
-                      context,
-                      () => widget.store.setHideVip(!widget.store.hideVip),
-                    ),
-                    icon: VipIcon(hidden: widget.store.hideVip),
-                  ),
-              ],
-            ),
-          ),
+        // B7c：原先这里还有 `if (television) CatalogFilters(...)` —— TV 用遥控
+        // 可聚焦的 chip 行。随 TV 下线删除（`CatalogFilters` 本身仍被
+        // 榜单页与推荐页使用，未删）。
         if (_showRecommendations)
           Expanded(
             child: GestureDetector(
-              onHorizontalDragEnd: television ? null : _swipeCategory,
+              onHorizontalDragEnd: _swipeCategory,
               child: RecommendationsScreen(
                 repository: widget.repository,
                 store: widget.store,
@@ -1499,7 +1373,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const LinearProgressIndicator(minHeight: 2),
           Expanded(
             child: GestureDetector(
-              onHorizontalDragEnd: television ? null : _swipeCategory,
+              onHorizontalDragEnd: _swipeCategory,
               child: _loading && _items.isEmpty
                   ? const Center(
                       child: Column(

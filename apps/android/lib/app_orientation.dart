@@ -4,26 +4,26 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import 'app_layout.dart';
 
 class AppOrientationController {
-  AppOrientationController({required bool television})
-    : _television = television;
+  AppOrientationController();
 
-  bool _television;
   bool _disposed = false;
-  bool? _nativeTelevision;
   Object? _playbackOwner;
   List<DeviceOrientation> _playbackOrientations = DeviceOrientation.values;
   List<DeviceOrientation>? _appliedOrientations;
   Future<void> _pending = Future<void>.value();
 
+  /// 播放期期望的方向。
+  ///
+  /// B7c：原签名含 `required bool television`，并在 `television ||
+  /// fullscreen && aspectRatio >= 1` 时锁横屏 —— TV 那一支随 TV 下线删除。
+  /// 现只按「全屏 + 宽高比」判定（这是播放器全屏的既有语义）。
   static List<DeviceOrientation> orientations({
-    required bool television,
     bool fullscreen = false,
     double aspectRatio = 1,
   }) {
-    if (television || fullscreen && aspectRatio >= 1) {
+    if (fullscreen && aspectRatio >= 1) {
       return const [
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
@@ -38,15 +38,6 @@ class AppOrientationController {
     return DeviceOrientation.values;
   }
 
-  Future<void> setTelevision(bool television) {
-    if (_television != television) {
-      _television = television;
-      _playbackOwner = null;
-      _playbackOrientations = DeviceOrientation.values;
-    }
-    return _apply();
-  }
-
   Future<void> setPlayback(
     Object owner, {
     required bool fullscreen,
@@ -54,20 +45,16 @@ class AppOrientationController {
   }) async {
     final previousOwner = _playbackOwner;
     final previousOrientations = _playbackOrientations;
-    if (!_television) {
-      _playbackOwner = owner;
-      _playbackOrientations = orientations(
-        television: false,
-        fullscreen: fullscreen,
-        aspectRatio: aspectRatio,
-      );
-    }
+    _playbackOwner = owner;
+    _playbackOrientations = orientations(
+      fullscreen: fullscreen,
+      aspectRatio: aspectRatio,
+    );
     final requested = _playbackOrientations;
     try {
       await _apply();
     } catch (_) {
       if (!_disposed &&
-          !_television &&
           identical(_playbackOwner, owner) &&
           identical(_playbackOrientations, requested)) {
         _playbackOwner = previousOwner;
@@ -78,7 +65,6 @@ class AppOrientationController {
   }
 
   Future<void> releasePlayback(Object owner) {
-    if (_television) return refresh();
     if (!identical(_playbackOwner, owner)) return Future<void>.value();
     _playbackOwner = null;
     _playbackOrientations = DeviceOrientation.values;
@@ -95,22 +81,10 @@ class AppOrientationController {
               defaultTargetPlatform != TargetPlatform.iOS)) {
         return;
       }
-      final television = _television;
-      if (defaultTargetPlatform == TargetPlatform.android &&
-          (force || _nativeTelevision != television)) {
-        try {
-          await AppDevice.channel.invokeMethod<void>('setTelevisionMode', {
-            'enabled': television,
-          });
-          _nativeTelevision = television;
-        } on MissingPluginException {
-          _nativeTelevision = null;
-        }
-      }
-      if (_disposed || television != _television) return;
-      final preferred = television
-          ? orientations(television: true)
-          : _playbackOrientations;
+      // B7c：原此处会向原生发 `setTelevisionMode`（TV 锁横屏），随 TV 下线删除。
+      // 方向只由 `_playbackOrientations`（播放期）决定。
+      if (_disposed) return;
+      final preferred = _playbackOrientations;
       if (force || !listEquals(preferred, _appliedOrientations)) {
         await SystemChrome.setPreferredOrientations(preferred);
         if (!_disposed) _appliedOrientations = preferred;
@@ -128,11 +102,9 @@ class AppOrientationController {
 class AppOrientationScope extends StatefulWidget {
   const AppOrientationScope({
     super.key,
-    required this.television,
     required this.child,
   });
 
-  final bool television;
   final Widget child;
 
   static AppOrientationController? maybeOf(BuildContext context) => context
@@ -145,23 +117,13 @@ class AppOrientationScope extends StatefulWidget {
 
 class _AppOrientationScopeState extends State<AppOrientationScope>
     with WidgetsBindingObserver {
-  late final _controller = AppOrientationController(
-    television: widget.television,
-  );
+  late final _controller = AppOrientationController();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _apply(_controller.refresh());
-  }
-
-  @override
-  void didUpdateWidget(covariant AppOrientationScope oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.television != widget.television) {
-      _apply(_controller.setTelevision(widget.television));
-    }
   }
 
   @override

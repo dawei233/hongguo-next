@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 
-import 'app_layout.dart';
 import 'core_bridge.dart';
 import 'download_picker.dart';
 import 'downloads_screen.dart';
@@ -257,7 +256,7 @@ class _DetailScreenState extends State<DetailScreen> {
           content: const Text('站源可能只提供试看或限制播放。'),
           actions: [
             TextButton(
-              autofocus: AppLayout.isTelevision(context),
+              // B7c：TV 遥控自动聚焦随 TV 下线删除。
               onPressed: () => Navigator.pop(context, false),
               child: const Text('取消'),
             ),
@@ -338,7 +337,6 @@ class _DetailScreenState extends State<DetailScreen> {
       final current = episodes.indexWhere((item) => item.number == watched.episode);
       resumeIndex = current >= 0 ? current : 0;
     }
-    final television = AppLayout.isTelevision(context);
     final allowed =
         widget.store.profileEpoch == _profileEpoch &&
         widget.store.allowsSource(drama.source);
@@ -351,7 +349,7 @@ class _DetailScreenState extends State<DetailScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          toolbarHeight: television ? 64 : null,
+          // B7c：TV 加高 appbar（64）随 TV 下线删除，用平台默认高度。
           title: Text(drama.title, overflow: TextOverflow.ellipsis),
           actions: [
             RefreshAction(
@@ -375,7 +373,10 @@ class _DetailScreenState extends State<DetailScreen> {
                       message: '请返回剧库后重新选择。',
                     );
                   }
-                  if (television || constraints.maxWidth >= 960) {
+                  // B7c：原 `television || constraints.maxWidth >= 960` ——
+                  // 删除 TV 那一半后**保留宽度判据**：宽屏（≥960）双栏是
+                  // 平板/PC 的正当布局，与 TV 无关，能力必须留下。
+                  if (constraints.maxWidth >= 960) {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -521,7 +522,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       Expanded(
                         child: FilledButton.icon(
                           key: const ValueKey('start-play'),
-                          autofocus: television,
+                          // B7c：TV 遥控自动聚焦随 TV 下线删除。
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(0, 52),
                             padding: const EdgeInsets.symmetric(
