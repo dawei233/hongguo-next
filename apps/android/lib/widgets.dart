@@ -7,6 +7,7 @@ import 'core_bridge.dart';
 import 'app_layout.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
+import 'ui/layout.dart';
 
 Future<void> saveUserChange(
   BuildContext context,
@@ -564,8 +565,23 @@ class StatusPanel extends StatelessWidget {
 }
 
 SliverGridDelegate dramaGridDelegate(BuildContext context, double width) {
-  final columns = width < 600 ? 3 : (width / 180).floor().clamp(4, 9);
-  final spacing = width < 600 ? 10.0 : 18.0;
+  // §2.1（B1）：列数收敛到 HnBreak.posterColumns 单点。
+  // AR-UI §6.2 原则 2：本函数不得再自带列数算术（原实现是
+  // `width<600 ? 3 : (width/180).floor().clamp(4,9)`，与 home_screen /
+  // detail_screen / remote_widgets 的另外三套互不一致）。
+  //
+  // 形态判定要整屏宽（HnBreak 只认「宽 + 朝向」）：这里传入的 `width` 是
+  // 内容区可用宽（父级 Row 的 Expanded 已扣掉左轨），比整屏小 ——
+  // 直接拿它判形态会把 900–988px 的平板误判成手机，故从 MediaQuery 取整屏宽。
+  final media = MediaQuery.maybeOf(context);
+  final screen = media?.size ?? Size.zero;
+  final hasScreen = screen.width > 0 && screen.height > 0;
+  final columns = HnBreak.posterColumns(
+    width,
+    landscape: hasScreen ? screen.width > screen.height : true,
+    screenWidth: hasScreen ? screen.width : width,
+  );
+  const spacing = HnBreak.posterGap;
   final tileWidth = (width - (columns - 1) * spacing) / columns;
   return SliverGridDelegateWithFixedCrossAxisCount(
     crossAxisCount: columns,

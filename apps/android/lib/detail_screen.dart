@@ -18,6 +18,7 @@ import 'widgets.dart';
 import 'sources_screen.dart';
 import 'episode_browser.dart';
 import 'follow_state.dart';
+import 'ui/layout.dart';
 import 'hongguo_series.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -645,16 +646,31 @@ class _DetailScreenState extends State<DetailScreen> {
     });
   }
 
+  /// 选集网格列数（§2.1 收敛点）。
+  ///
+  /// 原实现自带一套算术：`((width-40) / max(82, textScale*20*digits*.65+40)).clamp(1,12)`，
+  /// 与 home_screen / widgets / remote_widgets 的另外三套互不一致（§0 诊断的
+  /// 「同一宽屏下发现页 7 列、选集 5 列」即由此而来）。
+  ///
+  /// B1 把它收敛到 `HnBreak.episodeColumns`，但**保留**原实现的两个真实关切：
+  /// 1. 集号位数：集号到三位数时单格需要更宽（否则数字换行/截断）
+  /// 2. 系统文字缩放：用户放大字号后固定列数会把 tile 挤到重叠
+  /// 这两点通过 `minTileWidth` 传给单点实现，由它按可用宽重新求解。
   int _episodeColumns(double width, List<Episode> episodes) {
     final digits = episodes.fold<int>(
       1,
       (value, episode) => math.max(value, episode.number.toString().length),
     );
-    final minimum = math.max(
+    final minimum = math.max<double>(
       82,
       MediaQuery.textScalerOf(context).scale(20) * digits * .65 + 40,
     );
-    return ((width - 40) / minimum).floor().clamp(1, 12);
+    final screen = MediaQuery.sizeOf(context);
+    return HnBreak.episodeColumns(
+      width - 40,
+      landscape: screen.width > screen.height,
+      minTileWidth: minimum,
+    );
   }
 
   Widget _overview(Drama drama) {

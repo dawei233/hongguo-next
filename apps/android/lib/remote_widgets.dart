@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import 'ui/layout.dart';
 import 'search_input.dart';
 import 'package:flutter/services.dart';
 
@@ -633,7 +634,9 @@ class _TelevisionSearchDialogState extends State<TelevisionSearchDialog> {
                           child: GridView.builder(
                             physics: const NeverScrollableScrollPhysics(),
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 6,
+                              // §6.2 原则 2：列数集中到 ui/layout.dart（键盘是固定
+                              // 键位规格，不随宽度变化，故用 HnBreak.keyboardColumns）。
+                              crossAxisCount: HnBreak.keyboardColumns,
                               mainAxisSpacing: 8,
                               crossAxisSpacing: 8,
                               childAspectRatio: 1.4,

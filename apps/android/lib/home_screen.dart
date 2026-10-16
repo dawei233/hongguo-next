@@ -21,6 +21,7 @@ import 'local_store.dart';
 import 'lan_screen.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
+import 'ui/layout.dart';
 import 'widgets.dart';
 import 'vip_icon.dart';
 import 'settings_screen.dart';
@@ -1508,7 +1509,19 @@ class _HomeScreenState extends State<HomeScreen> {
     ScrollController? controller,
     Widget? footer,
   }) {
-    final columns = ((width - 36) / 150).floor().clamp(1, 8);
+    // §2.1（B1）：列数收敛到 HnBreak 单点。
+    //
+    // ⚠ 这条 TV 路径**不在重设计范围**（用户明确：TV 无所谓，主要给平板/手机/PC
+    // 用；平板只横屏）。但它原先自带第 5 套列数算法
+    // （`((width-36)/150).floor().clamp(1,8)`），会让 §6.2 原则 2 的 CI grep 守卫
+    // （`crossAxisCount:` 只许命中 layout.dart）失效。故一并收敛到单点，
+    // 取值语义保持不变（TV 是 10-foot 大屏，按横屏档计算）。
+    final columns = HnBreak.posterColumns(
+      width,
+      landscape: true,
+      // TV 走的是整屏宽（没有左轨扣减），传 width 作 screenWidth 即按同一口径判形态。
+      screenWidth: width + HnBreak.railWide,
+    );
     final tileWidth = (width - 36 - (columns - 1) * 14) / columns;
     return RemoteGrid(
       key: ValueKey('tv-grid-$key'),

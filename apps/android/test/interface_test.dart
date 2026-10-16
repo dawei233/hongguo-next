@@ -108,16 +108,29 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // B1（ANDROID-UI-REDESIGN §2.1）把手机竖屏收敛为**固定 2 列**后，
+    // 夹具 3 部剧里的第 3 部（会员合成剧）不再落在首屏 —— 3 列时它与前两部
+    // 同排可见，2 列时必须下滚才可见。本测试断言的是「VIP 内容在各站源下的
+    // 可见性」，与"一行放几张"无关，故把目标卡滚入视野再断言。
+    Future<void> revealVipCard() async {
+      if (find.text('会员合成剧').evaluate().isNotEmpty) return;
+      await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -400));
+      await tester.pumpAndSettle();
+    }
+
     for (final group in SourceGroup.fromSources(SourceSite.values)) {
       await select(group.name);
       if (group.id == 'huangdou') {
         expect(find.text('会员合成剧'), findsNothing);
         await tester.tap(find.byTooltip('VIP：隐藏'));
         await tester.pumpAndSettle();
+        // 隐藏 VIP 后该卡重新出现（可能在首屏，也可能需下滚）。
+        await revealVipCard();
         expect(find.text('会员合成剧'), findsOneWidget);
       } else {
         expect(find.byTooltip('VIP：隐藏'), findsNothing);
         expect(find.byTooltip('VIP：显示'), findsNothing);
+        await revealVipCard();
         expect(find.text('会员合成剧'), findsWidgets);
       }
     }
@@ -178,16 +191,26 @@ void main() {
         }
         final covers = find.byType(DramaCover);
         final tiles = find.byType(DramaTile);
-        expect(covers, findsNWidgets(3));
+        // 断言「所有渲染出的海报尺寸一致、比例 2:3」。
+        //
+        // 原断言写死 `findsNWidgets(3)` + 遍历 `covers.at(0..2)` 并要求 three 张
+        // 同 bottom —— 那是在断言「一行放得下 3 张」，即把**旧的 3 列竖屏密度**
+        // 当成了本测试的意图。B1（ANDROID-UI-REDESIGN §2.1）把手机竖屏收敛为
+        // **固定 2 列**，3 张卡必然折成两行，`bottom` 不再相等，于是原断言失败。
+        //
+        // 本测试真正的意图（见用例名）是「catalog 与 saved 两页的海报对齐」
+        // —— 即同一张卡在两个页面里的尺寸一致，与一行放几张无关。故改为：
+        // 逐张校验比例，并与 catalog 首张的尺寸对比。这样在 2/3/6 列下都成立。
+        expect(covers, findsAtLeastNWidgets(2));
         final first = tester.getRect(covers.first);
         catalogSize ??= first.size;
         expect(first.width, closeTo(catalogSize.width, .01));
         expect(first.height, closeTo(catalogSize.height, .01));
-        for (var index = 0; index < 3; index++) {
+        final visible = covers.evaluate().length;
+        for (var index = 0; index < visible; index++) {
           final rect = tester.getRect(covers.at(index));
           expect(rect.width / rect.height, closeTo(2 / 3, .001));
           expect(rect.width, closeTo(first.width, .01));
-          expect(rect.bottom, closeTo(first.bottom, .01));
           expect(
             tester.getSize(tiles.at(index)).height,
             tester.getSize(tiles.first).height,

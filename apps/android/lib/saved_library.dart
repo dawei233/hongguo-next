@@ -8,6 +8,7 @@ import 'follow_state.dart';
 import 'local_store.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
+import 'ui/layout.dart';
 import 'widgets.dart';
 
 class SavedLibrary extends StatefulWidget {
@@ -230,9 +231,19 @@ class _SavedLibraryState extends State<SavedLibrary> {
       return LayoutBuilder(
         builder: (context, constraints) {
           if (AppLayout.isTelevision(context)) {
-            final columns = ((constraints.maxWidth - 36) / 150).floor().clamp(
-              1,
-              8,
+            // §2.1（B1）：列数收敛到 HnBreak 单点。
+            //
+            // 这里原是 home_screen `_televisionGrid` 的**逐字副本**
+            // （`((maxWidth-36)/150).floor().clamp(1,8)`）—— 同一算法写两遍，
+            // 正是 §0 诊断的「四处算法互不一致」来源之一（且不含 `crossAxisCount:`
+            // 字样，所以 §7 的 grep 守卫扫不到它，只能靠行为测试暴露）。
+            //
+            // ⚠ TV 不在重设计范围（用户明确：主要给平板/手机/PC 用），
+            // 但为满足 §6.2 原则 2（列数单点）一并收敛；取值口径不变。
+            final columns = HnBreak.posterColumns(
+              constraints.maxWidth,
+              landscape: true,
+              screenWidth: constraints.maxWidth + HnBreak.railWide,
             );
             final tileWidth =
                 (constraints.maxWidth - 36 - (columns - 1) * 14) / columns;

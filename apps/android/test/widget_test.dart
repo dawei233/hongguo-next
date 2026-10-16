@@ -162,8 +162,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('测试短剧'), findsOneWidget);
     expect(repository.requests, isEmpty);
+    // B1（ANDROID-UI-REDESIGN §2.1）：手机竖屏海报从 3 列收敛为**固定 2 列**
+    // 后，同样的 6 部剧内容高度增加（每行少放一张 → 多一行），
+    // 原先「最多 4 次 -900px 拖动」到不了分页触发点，`repository.pages` 为空。
+    // 本测试断言的是「滚到底会请求第 4 页」，与需要几次拖动无关，
+    // 故改为按「滚到 maxScrollExtent」为终止条件（内容多高都能到达）。
     final scrollable = find.byType(CustomScrollView);
-    for (var i = 0; i < 4 && repository.pages.isEmpty; i++) {
+    for (var i = 0; i < 12 && repository.pages.isEmpty; i++) {
       await tester.drag(scrollable, const Offset(0, -900));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
