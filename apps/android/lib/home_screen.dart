@@ -20,6 +20,8 @@ import 'local_store.dart';
 import 'lan_screen.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
+import 'ui/components/hn_featured_card.dart';
+import 'ui/components/hn_hero_rail.dart';
 import 'ui/components/hn_navigation_rail.dart';
 import 'ui/components/hn_section_header.dart';
 import 'ui/components/hn_segmented_tabs.dart';
@@ -67,6 +69,15 @@ class _HomeScreenState extends State<HomeScreen> {
   late SourceSite _source;
   bool _allSources = false;
   List<Drama> _items = [];
+
+  /// §4.1.1 首屏「正在热播」横轨的数据（取自红果推荐位）。
+  ///
+  /// **只在红果站源加载**：推荐位是红果专有接口（`repository.recommendations`
+  /// 对其它源会抛「当前环境不支持红果推荐」）。取不到时整块不渲染 ——
+  /// 不显示空轨、也不编造内容（§4.1.1 的空态原则）。
+  List<Drama> _heroItems = const [];
+  bool _heroLoading = false;
+  int _heroGeneration = 0;
   bool _loading = true;
   bool _loadingMore = false;
   bool _hasMore = true;
@@ -644,6 +655,12 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // §4.1.1：首屏横轨与「今日首选」的数据来自红果推荐位。
+    // 只在「红果站源 + 非分页 + 无搜索/分类过滤」时拉 —— 过滤态下首屏
+    // 展示的是过滤结果，此时再挂横轨会与用户意图冲突。
+    if (!more && _showsDiscoveryFlow) {
+      unawaited(_loadHero());
+    }
     try {
       final result = await _browser.load(
         group,
@@ -663,6 +680,31 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadingMore = false;
         _error = error.toString();
       });
+    }
+  }
+
+  /// §4.1.1：拉取首屏横轨/今日首选的推荐位数据。
+  ///
+  /// 只在红果站源可用（推荐位是红果专有接口）。失败**静默降级为空** ——
+  /// 首屏横轨不是关键路径，不因它失败而弹错误条；网格本身有自己的错误态。
+  Future<void> _loadHero() async {
+    if (_group.id != 'hongguo' || _source.id != 'hongguo') {
+      if (_heroItems.isNotEmpty) setState(() => _heroItems = const []);
+      return;
+    }
+    final generation = ++_heroGeneration;
+    setState(() => _heroLoading = _heroItems.isEmpty);
+    try {
+      final page = await widget.repository.recommendations('short_play');
+      if (!mounted || generation != _heroGeneration) return;
+      setState(() {
+        _heroItems = page.items;
+        _heroLoading = false;
+      });
+    } catch (_) {
+      if (!mounted || generation != _heroGeneration) return;
+      // 静默降级：不设 _error（那是网格的错误），只收起骨架。
+      setState(() => _heroLoading = false);
     }
   }
 
@@ -1360,6 +1402,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 是否处于「无过滤的内容流」——§4.1.1 的 Hero/今日首选只在这时出现。
+  ///
+  /// 起因：`_loadHero` 只在无过滤时**刷新**，但渲染条件是 `_heroItems` 非空
+  /// ——于是搜索后横轨仍挂在搜索结果上方（陈旧数据占位、还挤掉结果）。
+  /// 判据抽成 getter，让"何时刷新"与"何时显示"用同一个条件，不会再分叉。
+  bool get _showsDiscoveryFlow =>
+      _tab == 0 &&
+      !_showRecommendations &&
+      _category.isEmpty &&
+      _search.text.trim().isEmpty &&
+      _submittedQuery.isEmpty;
+
   /// 发现页区块头标题（§4.1.1）。
   ///
   /// 过滤中（分类/搜索/站源筛选）显示当前分类名，让用户知道看的是什么；
@@ -1561,6 +1615,72 @@ class _HomeScreenState extends State<HomeScreen> {
                             controller: _scroll,
                             physics: const AlwaysScrollableScrollPhysics(),
                             slivers: [
+                              // §4.1.1：首屏内容流自上而下为
+                              //   ①「正在热播」横轨（Hero）
+                              //   ②「今日首选」大卡（推荐位第一条）
+                              //   ③ 区块头 + 海报墙
+                              // 前两块依赖红果推荐位；取不到整块不渲染
+                              // （不显示空轨/空卡，也不编造内容）。
+                              if (_showsDiscoveryFlow && _heroLoading)
+                                SliverToBoxAdapter(
+                                  child: HnHeroRail(
+                                    items: const [],
+                                    repository: widget.repository,
+                                    onOpen: _openDrama,
+                                    loading: true,
+                                  ),
+                                )
+                              else if (_showsDiscoveryFlow && _heroItems.isNotEmpty)
+                                SliverToBoxAdapter(
+                                  child: HnHeroRail(
+                                    items: _heroItems,
+                                    repository: widget.repository,
+                                    onOpen: _openDrama,
+                                  ),
+                                ),
+                              if (_showsDiscoveryFlow && _heroItems.isNotEmpty)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: HnSpacing.step4,
+                                    ),
+                                    child: HnFeaturedCard(
+                                      drama: _heroItems.first,
+                                      repository: widget.repository,
+                                      onOpen: () =>
+                                          _openDrama(_heroItems.first),
+                                      // 已追剧时不再显示「追剧」（按钮语义是
+                                      // "加入"，已加入再点会变成取消，容易误触）。
+                                      onFollow: widget.store.isFavorite(
+                                        _heroItems.first.id,
+                                      )
+                                          ? null
+                                          : () => saveUserChange(
+                                              context,
+                                              () => widget.store.toggleFavorite(
+                                                _heroItems.first,
+                                              ),
+                                            ),
+                                      following: widget.store.isFavorite(
+                                        _heroItems.first.id,
+                                      ),
+                                      watchedEpisode: widget.store
+                                          .watched(_heroItems.first.id)
+                                          ?.episode,
+                                      onContinue: widget.store
+                                                  .watched(
+                                                    _heroItems.first.id,
+                                                  ) ==
+                                              null
+                                          ? null
+                                          : () => _openDrama(
+                                              _heroItems.first,
+                                              resume: true,
+                                            ),
+                                      episodeCount: _heroItems.first.episodes,
+                                    ),
+                                  ),
+                                ),
                               // §4.1.1（B2 首屏）：区块头 —— 首屏从"筛选器 +
                               // 一片网格"改成内容流后，用它表达分组层级。
                               // 标题取当前分类名（「全部」时用「热门短剧」）；
