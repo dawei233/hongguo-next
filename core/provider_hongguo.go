@@ -198,10 +198,23 @@ func (d *Downloader) resolveHongguoMedia(ctx context.Context, task Task) (provid
 	if !hongguoNumericID.MatchString(videoID) || !hongguoNumericID.MatchString(seriesID) {
 		return providerMedia{}, fmt.Errorf("红果章节 ID 无效，请重新获取章节")
 	}
-	media, nativeErr := d.resolveHongguoAppMedia(ctx, videoID)
+	// [hongguo-next 补丁 2026-10-16] App 路改为两次尝试：
+	//   ① 正确链路 multi_video_model/preload/v1 + fallback_api 二跳（实测可用）
+	//   ② 旧 video_model/v1（vendored 原实现）—— 服务端已返回空 body，保留作回退，
+	//      万一老端点恢复或某集只有单档数组形态仍能命中。
+	// 只认 ① 是 2026-10-16 真机「返不出视频流」的根因；只留 ② 会一直失败。
+	media, nativeErr := d.resolveHongguoMultiVideoMedia(ctx, videoID)
 	if nativeErr == nil {
-		d.recordDiagnostic(diagnosticEvent{Event: "hongguo.route", Level: "info", Message: fmt.Sprintf("app路成功 url尾=%s playlistLen=%d", media.URL[max(0, len(media.URL)-16):], len(media.Playlist))})
+		d.recordDiagnostic(diagnosticEvent{Event: "hongguo.route", Level: "info", Message: fmt.Sprintf("app路(multi/preload)成功 url尾=%s playlistLen=%d", media.URL[max(0, len(media.URL)-16):], len(media.Playlist))})
 		return d.finalizeHongguoMedia(ctx, media)
+	}
+	if err := ctx.Err(); err != nil {
+		return providerMedia{}, err
+	}
+	legacyMedia, legacyErr := d.resolveHongguoAppMedia(ctx, videoID)
+	if legacyErr == nil {
+		d.recordDiagnostic(diagnosticEvent{Event: "hongguo.route", Level: "info", Message: fmt.Sprintf("app路(legacy video_model)成功 url尾=%s playlistLen=%d", legacyMedia.URL[max(0, len(legacyMedia.URL)-16):], len(legacyMedia.Playlist))})
+		return d.finalizeHongguoMedia(ctx, legacyMedia)
 	}
 	if err := ctx.Err(); err != nil {
 		return providerMedia{}, err
@@ -219,7 +232,7 @@ func (d *Downloader) resolveHongguoMedia(ctx context.Context, task Task) (provid
 		d.recordDiagnostic(diagnosticEvent{Event: "hongguo.route", Level: "info", Message: fmt.Sprintf("djapi路成功 url尾=%s playlistLen=%d", media.URL[max(0, len(media.URL)-16):], len(media.Playlist))})
 		return d.finalizeHongguoMedia(ctx, media)
 	}
-	return providerMedia{}, fmt.Errorf("红果 App 取流失败：%v；网页取流失败：%v；备用取流失败：%w", publicError(nativeErr), publicError(pageErr), apiErr)
+	return providerMedia{}, fmt.Errorf("红果 App 取流失败：%v（旧端点回退：%v）；网页取流失败：%v；备用取流失败：%w", publicError(nativeErr), publicError(legacyErr), publicError(pageErr), apiErr)
 }
 
 // [红果漫剧补丁] 红果三路回退的统一出口：main_url 常为 .m3u8（内含多个 4MB CDN
