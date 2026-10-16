@@ -1,7 +1,0 @@
-<!-- 红果 Next 自适应图标前景（果核 Seed Mark），由 tools/gen_icon.py 生成 -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FDF9F8"
-        android:pathData="M37.00,67.00 Q37.00,72.50 42.03,70.28 L73.97,56.22 Q79.00,54.00 73.97,51.78 L42.03,37.72 Q37.00,35.50 37.00,41.00 Z"/>
-</vector>
