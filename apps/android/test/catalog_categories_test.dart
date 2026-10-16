@@ -147,7 +147,15 @@ void main() {
       );
       expect(find.byType(TextField), findsNothing);
       final coverTop = tester.getTopLeft(find.byType(DramaCover).first).dy;
-      expect(coverTop, lessThan(150));
+      // 本断言的原意是「搜索框收起时，首屏内容能尽快出现」——用「第一张海报的
+      // 顶边 < 150」当作代理指标。B2 首屏重构在网格上方加了**区块头**
+      // （§5.1 第 3 条：内容行 40 + 上 step6 24 + 下 step2 8 = 72），
+      // 海报因此整体下移。
+      //
+      // 阈值改为「AppBar + 筛选行 + 区块头 + 一张卡的距离」——即断言
+      // **区块头确实只占它该占的高度**（若哪天区块头变成 200 高，这条会红）。
+      // 保留原意：内容在首屏就要可见（不滚动即见）。
+      expect(coverTop, lessThan(150 + 72), reason: '首屏内容应立即可见');
       final switcher = find.byKey(const ValueKey('source-switch'));
       final rankings = find.byKey(const ValueKey('open-rankings'));
       expect(

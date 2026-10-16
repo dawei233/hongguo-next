@@ -113,9 +113,17 @@ void main() {
     // 同排可见，2 列时必须下滚才可见。本测试断言的是「VIP 内容在各站源下的
     // 可见性」，与"一行放几张"无关，故把目标卡滚入视野再断言。
     Future<void> revealVipCard() async {
-      if (find.text('会员合成剧').evaluate().isNotEmpty) return;
-      await tester.drag(find.byType(CustomScrollView).first, const Offset(0, -400));
-      await tester.pumpAndSettle();
+      // B2 首屏重构在网格上方加了区块头（72），同一张卡的位置整体下移，
+      // 原先"一次 -400"的固定拖动不再总能滚到。改为**循环拖到出现为止**
+      // （最多 6 次），这样布局再变也不会让这条断言变成"调参游戏"。
+      for (var i = 0; i < 6; i++) {
+        if (find.text('会员合成剧').evaluate().isNotEmpty) return;
+        await tester.drag(
+          find.byType(CustomScrollView).first,
+          const Offset(0, -300),
+        );
+        await tester.pumpAndSettle();
+      }
     }
 
     for (final group in SourceGroup.fromSources(SourceSite.values)) {

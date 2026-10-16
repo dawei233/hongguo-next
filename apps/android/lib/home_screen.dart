@@ -21,6 +21,7 @@ import 'lan_screen.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
 import 'ui/components/hn_navigation_rail.dart';
+import 'ui/components/hn_section_header.dart';
 import 'ui/components/hn_segmented_tabs.dart';
 import 'ui/layout.dart';
 import 'ui/tokens.dart';
@@ -1338,6 +1339,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 发现页区块头标题（§4.1.1）。
+  ///
+  /// 过滤中（分类/搜索/站源筛选）显示当前分类名，让用户知道看的是什么；
+  /// 无过滤时用「热门短剧」—— 这是榜单热度的直白说法，不编造"编辑推荐"
+  /// 这类没有数据支撑的文案。
+  String get _sectionTitle {
+    final query = _search.text.trim();
+    if (query.isNotEmpty) return '搜索「$query」';
+    final id = _displayCategory;
+    if (id.isEmpty || id == _recommendationCategory) return '热门短剧';
+    for (final entry in _displayCategories) {
+      if (entry.id == id) {
+        // 本地分类的 id 形如 local:<name>，显示名即其后缀。
+        return id.startsWith('local:') ? entry.name : '${entry.name}短剧';
+      }
+    }
+    return '热门短剧';
+  }
+
   Widget _catalog({required bool selectionInBody}) {
     final items = _visible;
     final television = AppLayout.isTelevision(context);
@@ -1514,6 +1534,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             controller: _scroll,
                             physics: const AlwaysScrollableScrollPhysics(),
                             slivers: [
+                              // §4.1.1（B2 首屏）：区块头 —— 首屏从"筛选器 +
+                              // 一片网格"改成内容流后，用它表达分组层级。
+                              // 标题取当前分类名（「全部」时用「热门短剧」）；
+                              // 右侧「全部 ›」在已筛选时作为回到全量的入口。
+                              SliverToBoxAdapter(
+                                child: HnSectionHeader(
+                                  title: _sectionTitle,
+                                  actionLabel: _category.isEmpty ? null : '全部 ›',
+                                  onAction: _category.isEmpty
+                                      ? null
+                                      : () => _changeCategory(''),
+                                ),
+                              ),
                               SliverPadding(
                                 padding: EdgeInsets.fromLTRB(
                                   padding,
