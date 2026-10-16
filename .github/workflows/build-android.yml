@@ -329,9 +329,7 @@ jobs:
             gh release create preview \
               --repo "$GITHUB_REPOSITORY" \
               --title "红果 Next — 安卓 arm64 最新预览版" \
-              --notes "滚动更新的安卓预览版（arm64-v8a），每次手动触发 CI 时覆盖。
-  固定下载地址即本页；正式版本另行打 tag 发布。
-  来源链路与上游署名见仓库 NOTICE（GPL-3.0）。"
+              --notes "滚动更新的安卓预览版（arm64-v8a），每次手动触发 CI 时覆盖。固定下载地址即本页；正式版本另行打 tag 发布。来源链路与上游署名见仓库 NOTICE（GPL-3.0）。"
           fi
           gh release upload preview dist/hongguo-next-arm64-v8a.apk dist/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --clobber
