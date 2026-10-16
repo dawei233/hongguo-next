@@ -305,10 +305,20 @@ jobs:
 
       # ③ Release APK。无 key.properties 时按 vendored build.gradle.kts 回退
       #    debug 签名（可安装、可校验；正式上架前注入真实 keystore）。
-      #    注：内核 .so 只产出 arm64-v8a（步骤 ①），如需 §6.3 的
-      #    app-arm64-v8a.apk 单 ABI 产物，加 --target-platform android-arm64 --split-per-abi。
-      - name: ③ flutter build apk --release
-        run: flutter build apk --release
+      #
+      #    ⚠ `--target-platform android-arm64` 是**必需的**，不是优化：
+      #    内核 .so 由步骤 ① 只编 arm64（`GOARCH=arm64`、`HN_ABI_DIR=arm64-v8a`）。
+      #    裸 `flutter build apk` 会产出 arm64-v8a + armeabi-v7a + x86_64 三个
+      #    ABI，后两者**只有 libflutter.so、没有 libhncore_android.so** ——
+      #    那些设备**能装上、一打开就崩**（`DynamicLibrary.open(
+      #    'libhncore_android.so')` 失败）。
+      #
+      #    实测（2026-10-16 解包 preview 包）：v7a/x86_64 的 libflutter.so 在、
+      #    libhncore_android.so 不在。危害比"装不上"更隐蔽 —— 装上了才崩。
+      #    限定 ABI 后，APK 只为内核真正支持的架构分发。
+      #    产物名 `hongguo-next-arm64-v8a.apk` 本也只承诺 arm64。
+      - name: ③ flutter build apk --release（限定 arm64，与内核 .so 的 ABI 对齐）
+        run: flutter build apk --release --target-platform android-arm64
         working-directory: apps/android
 
       # ④ 产物校验 + 上传 APK + 校验和。任何断言失败即红。
@@ -320,6 +330,15 @@ jobs:
           test -s "$APK" || { echo "::error::APK 不存在：$APK"; exit 1; }
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libhncore_android.so" \
             || { echo "::error::APK 缺 lib/arm64-v8a/libhncore_android.so —— FFI 内核没有进包"; exit 1; }
+          # ABI 一致性：**每个声明了 libflutter.so 的 ABI，都必须同时有
+          # libhncore_android.so**。否则那些设备装上后会 dlopen 失败（崩），
+          # 而只断言"arm64 那份存在"的做法**抓不到**这种半残包 ——
+          # 2026-10-16 实测 preview 包就是这样溜过 CI 的（v7a/x86_64 缺内核）。
+          for abi_dir in $(unzip -l "$APK" | awk '/lib\/.*\/libflutter.so$/ {sub(/.*lib\//,""); sub(/\/libflutter.so.*/,""); print}' | sort -u); do
+            unzip -l "$APK" | grep -q "lib/$abi_dir/libhncore_android.so" \
+              || { echo "::error::ABI $abi_dir 有 libflutter.so 却缺 libhncore_android.so —— 该架构设备装上会崩"; exit 1; }
+          done
+          echo ">> ABI 一致性检查通过"
           BT="$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs "$APK" \
             || { echo "::error::apksigner verify 失败"; exit 1; }
