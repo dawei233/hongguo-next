@@ -369,10 +369,17 @@ jobs:
       # ⑤ 发布到滚动的 preview Release。artifact 7 天就过期、且埋在 Actions 里
       # 不易找，Release 才是安装包的固定住址 —— 固定下载地址：
       #   https://github.com/dawei233/hongguo-next/releases/tag/preview
-      # 手动触发（workflow_dispatch）才发布，push 触发只出 artifact，
-      # 避免每次 push 都覆盖同一个 release 资产。
-      - name: ⑤ 发布到 preview Release（手动触发时）
-        if: github.event_name == 'workflow_dispatch'
+      #
+      # **push 与手动触发都发布**（2026-10-16 调整）：原先是 dispatch-only，
+      # 但用户只看 Release、而 push 才是常态 —— 结果是"常态路径不发布，
+      # Release 长期滞后"（实测用户拿到的包比修复提交早了一个多小时，
+      # 我不得不手动 dispatch 一次才补上）。
+      #
+      # 不会有 release 噪音：① 同一个 `preview` tag 用 `--clobber` 覆盖资产，
+      # 不新建 release；② push 触发器已按 paths 过滤（仅 apps/android、
+      # core、bridge 等改动才跑），不是每次提交都发；③ 本步骤在 ④ 校验之后，
+      # 只有**全绿**的构建才会走到这里（失败时前面已 exit 1）。
+      - name: ⑤ 发布到 preview Release（push 与手动触发都发布）
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -380,7 +387,7 @@ jobs:
             gh release create preview \
               --repo "$GITHUB_REPOSITORY" \
               --title "红果 Next — 安卓 arm64 最新预览版" \
-              --notes "滚动更新的安卓预览版（arm64-v8a），每次手动触发 CI 时覆盖。固定下载地址即本页；正式版本另行打 tag 发布。来源链路与上游署名见仓库 NOTICE（GPL-3.0）。"
+              --notes "滚动更新的安卓预览版（arm64-v8a）。每次 CI 构建成功后覆盖本页资产（同一 tag，不新建 release）。固定下载地址即本页；正式版本另行打 tag 发布。来源链路与上游署名见仓库 NOTICE（GPL-3.0）。"
           fi
           gh release upload preview dist/hongguo-next-arm64-v8a.apk dist/SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --clobber
