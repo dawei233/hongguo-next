@@ -318,7 +318,19 @@ jobs:
       #    限定 ABI 后，APK 只为内核真正支持的架构分发。
       #    产物名 `hongguo-next-arm64-v8a.apk` 本也只承诺 arm64。
       - name: ③ flutter build apk --release（限定 arm64，与内核 .so 的 ABI 对齐）
-        run: flutter build apk --release --target-platform android-arm64
+        run: |
+          # `-Pdisable-abi-filtering=true` 是**必需的**，不是可选项：
+          # Flutter 的 Gradle 插件在 `configureAbiWithoutSplits` 里会
+          # `abiFilters.clear()` 然后 `addAll(PLATFORM_ABI_LIST)`
+          # （见 flutter_tools/.../FlutterPlugin.kt:592-599），**把我们刚在
+          # build.gradle.kts 里设的 arm64-v8a 覆盖成全平台**。传该属性后
+          # `shouldProjectDisableAbiFiltering` 返回 true，插件跳过覆写，
+          # 我们在 gradle 侧写的 abiFilters 才真正生效。
+          #
+          # CI 实测（run 38904442987）：只加 `--target-platform` 时 v7a/x86_64
+          # 目录里仍有插件原生库，④ 的 ABI 断言如实报红并拦下了发布。
+          flutter build apk --release --target-platform android-arm64 \
+            -Pdisable-abi-filtering=true
         working-directory: apps/android
 
       # ④ 产物校验 + 上传 APK + 校验和。任何断言失败即红。
