@@ -1,7 +1,6 @@
 import 'package:hongguo_next/core_bridge.dart';
 import 'package:hongguo_next/detail_screen.dart';
 import 'package:hongguo_next/downloads_screen.dart';
-import 'package:hongguo_next/home_screen.dart';
 import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/models.dart';
 import 'package:hongguo_next/playback_loader.dart';
@@ -14,7 +13,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fixtures.dart';
 import 'player_fixtures.dart';
-import 'remote_test_helpers.dart';
 
 class DownloadRepository extends FixtureRepository {
   final commands = <String>[];
@@ -542,45 +540,12 @@ void main() {
     },
   );
 
-  testWidgets(
-    'TV download navigation and long queue remain usable with only the remote',
-    (tester) async {
-      size(tester, const Size(960, 540));
-      final repository = DownloadRepository();
-      repository.jobs = List.generate(
-        20,
-        (index) => repository.job(index + 1, 'paused'),
-      );
-      await tester.pumpWidget(
-        televisionHost(
-          child: HomeScreen(repository: repository, store: await makeStore()),
-        ),
-      );
-      await tester.pumpAndSettle();
-      focusRemote(tester, find.byKey(const ValueKey('tv-nav-3')));
-      await tester.pumpAndSettle();
-      await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await tester.pumpAndSettle();
-      // 下载页是「合集折叠 + 合集内分集」结构，分集项默认不渲染，
-      // 先用遥控展开合集再聚焦分集。
-      focusRemote(tester, find.text(FixtureRepository.free.title).first);
-      await tester.pumpAndSettle();
-      await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await tester.pumpAndSettle();
-      focusRemote(tester, find.byKey(const ValueKey('download-task-1')));
-      await tester.pumpAndSettle();
-      for (var i = 0; i < 12; i++) {
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pumpAndSettle();
-      }
-      await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await tester.pumpAndSettle();
-      expect(find.text('测试短剧 · 第 13 集').last, findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.select);
-      await tick(tester);
-      expect(repository.commands.last, 'resume:13');
-      await tester.pumpWidget(const SizedBox.shrink());
-      expect(tester.takeException(), isNull);
-    },
-  );
+  // B7b：原「TV download navigation and long queue remain usable with only the
+  // remote」已删除 —— 全程 `sendKeyEvent` + `focusRemote`（`tv-nav-3` 起步），
+  // 保护的是**遥控可达性**，按判据删除。
+  //
+  // 它同时修过一个真实产品缺陷（"下载页没有遥控焦点"），但那个缺陷的**对象**
+  // 随 TV 下线而消失。其中"长队列 + resume"的业务行为由非 TV 用例覆盖：
+  // `queue controls, filtering and deletion work on a narrow phone`（含
+  // `resume:1` 断言），能力未丢失。
 }

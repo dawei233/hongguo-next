@@ -19,7 +19,6 @@ import 'downloads_screen.dart';
 import 'local_store.dart';
 import 'lan_screen.dart';
 import 'models.dart';
-import 'remote_widgets.dart';
 import 'ui/components/hn_featured_card.dart';
 import 'ui/components/hn_hero_rail.dart';
 import 'ui/components/hn_navigation_rail.dart';
@@ -421,10 +420,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toggleSearch() {
-    if (AppLayout.isTelevision(context)) {
-      _televisionSearch();
-      return;
-    }
+    // B7b：TV 搜索对话框（`_televisionSearch`）已随 TV 侧边栏删除。
+    // **能力没有丢失**：非 TV 的 `SearchInput` 同样支持 suggestions 与
+    // recentSearches（见 `_catalog` 里的 hint/suggestions/recentSearches）。
+
     if (_showRecommendations) _changeCategory('');
     final hadQuery = _search.text.isNotEmpty;
     setState(() {
@@ -503,25 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _televisionSearch() async {
-    final query = await showDialog<String>(
-      context: context,
-      builder: (_) => TelevisionSearchDialog(
-        initialValue: _search.text,
-        title: _group.id == 'all'
-            ? '搜索已开放站源'
-            : _onlineSearch
-            ? '搜索${_group.name}短剧'
-            : '筛选当前已加载短剧',
-        recentSearches: widget.store.recentSearches,
-        onCancel: () => unawaited(widget.repository.cancelSuggestions()),
-        suggestions: _searchSuggestions ? widget.repository.suggestions : null,
-      ),
-    );
-    if (query != null && mounted) {
-      _submitSearch(query);
-    }
-  }
+  // B7b：原 `_televisionSearch()`（TV 搜索对话框）已删，见 `_toggleSearch` 说明。
 
   void _televisionBack() {
     if (_selectionMode) {
@@ -844,21 +825,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _selectedDramas.clear();
   });
 
-  /// 连点「最近观看」6 次弹出站源密码锁（用于启用 / 关闭密码功能）。
-  /// hongguo-next：不再编译期分版（上游的「真果鉴才有密码功能」随之废弃），
-  /// 敏感站源默认隐藏、需解锁，所以密码门控对唯一的一个版本生效。
-  void _onNavSelected(int tab) {
-    if (tab == 2) {
-      if (_recentTaps.register(tab)) {
-        _openSourceGate();
-        return;
-      }
-    } else {
-      _recentTaps.reset();
-    }
-    _changeTab(tab);
-  }
-
   /// §3.2（B2）：非 TV 的目的地选择。
   ///
   /// 新 IA 是 3 个目的地（发现 / 我的 / 设置），但**内容派发仍由 `_tab` 决定**
@@ -867,13 +833,19 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 六处逻辑全部复用原 `_tab` 语义，改动面收敛在"导航 UI"这一层，
   /// 不牵动内容层 —— 与 §6.2 的"最小改动"一致。
   ///
-  /// **TV 不走这里**：TV 侧边栏直接调 `_onNavSelected(_tab)`（保持原样）。
   void _onDestinationSelected(int index) {
     switch (index) {
       case 0:
         _changeTab(0);
       case 1:
         // 进入「我的」，停在上次选的分段。
+        // 若当前正处于「最近」分段，底栏这一项也参与 6 连点（与左轨
+        // 「最近」等价）—— 让密码门在竖屏底栏同样可达。
+        if (_mySection == 1 && _recentTaps.register(_recentGateId)) {
+          _openSourceGate();
+          return;
+        }
+        if (_mySection != 1) _recentTaps.reset();
         _changeTab(1 + _mySection);
       case 2:
         _openSettings();
@@ -889,6 +861,11 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         _selectMySection(0);
       case 2:
+        // 「最近」保留密码门控（见 `_selectMySection` 的说明）。
+        if (_recentTaps.register(_recentGateId)) {
+          _openSourceGate();
+          return;
+        }
         _selectMySection(1);
       case 3:
         _selectMySection(2);
@@ -896,6 +873,21 @@ class _HomeScreenState extends State<HomeScreen> {
         _openSettings();
     }
   }
+
+  /// 6 连点「最近观看」弹站源密码锁的**触发标识**。
+  ///
+  /// ⚠ 修复一处 B2 引入的**可达性回归**（B7b 删 TV 侧边栏时由分析器
+  /// 的 `unused_element` 暴露）：
+  ///
+  /// B2 把底栏/左轨的回调从 `_onNavSelected` 换成 `_onDestinationSelected` /
+  /// `_onRailSelected`，但**忘了把密码门控搬过去** —— 于是 `_onNavSelected`
+  /// 只剩 TV 侧边栏还在调。B7b 删掉 TV 侧边栏后，`_onNavSelected` 成了死代码，
+  /// **密码门控在全部形态下都无法触发**。
+  ///
+  /// 之所以之前没被发现：`source_gate_test.dart` 测的是 `RepeatTapGate` 本身
+  /// （纯逻辑），**没有一条测试覆盖"连点导航 6 次会打开密码门"这条接线**。
+  /// 现补上接线与测试（`home_ia_test.dart` 的密码门用例）。
+  static const _recentGateId = 'nav-recent';
 
   void _selectMySection(int section) => setState(() {
     _mySection = section;
@@ -1257,38 +1249,10 @@ class _HomeScreenState extends State<HomeScreen> {
             top: false,
             child: Row(
               children: [
-                if (television) ...[
-                  SizedBox(
-                    width: 164,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 24, 8, 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final entry in [
-                            (Icons.explore_rounded, '发现'),
-                            (Icons.bookmark_rounded, '追剧'),
-                            (Icons.history_rounded, '最近观看'),
-                            if (widget.store.canDownload)
-                              (Icons.download_rounded, '下载'),
-                          ].indexed)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
-                              child: RemoteButton(
-                                key: ValueKey('tv-nav-${entry.$1}'),
-                                label: entry.$2.$2,
-                                icon: entry.$2.$1,
-                                selected: _tab == entry.$1,
-                                autofocus: entry.$1 == 0,
-                                onPressed: () => _onNavSelected(entry.$1),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const VerticalDivider(width: 1),
-                ] else if (desktop) ...[
+                // B7b：TV 侧边栏（164px 遥控导航）已删除。
+                // **`RemoteGrid` 等组件保留** —— 它们是网格与焦点容器，
+                // B5 的 compact 播放器侧栏在用（删前已核实引用非零）。
+                if (desktop) ...[
                   // §4.1.1（B3）：左导航轨按 §2.1 的形态给宽 ——
                   // 平板横屏 88（railWide）、手机横屏 72（railNarrow）。
                   // 改造前这里是无条件换成 Material `NavigationRail`，
@@ -1583,29 +1547,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
-                        if (television) {
-                          return _televisionGrid(
-                            items,
-                            constraints.maxWidth,
-                            key:
-                                'catalog-${_group.id}-$_category-$_submittedQuery',
-                            controller: _scroll,
-                            footer: Padding(
-                              padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-                              child: Center(
-                                child: _loadingMore
-                                    ? const CircularProgressIndicator()
-                                    : _hasMore
-                                    ? RemoteButton(
-                                        label: '加载更多',
-                                        icon: Icons.expand_more,
-                                        onPressed: () => _load(more: true),
-                                      )
-                                    : const Text('已经看到这里的全部剧集'),
-                              ),
-                            ),
-                          );
-                        }
+                        // B7b：TV 网格分支（`_televisionGrid`）已删除 ——
+                        // 非 TV 走下方带 Hero/区块头的 `CustomScrollView`，
+                        // 分页与"加载更多"由其中的 SliverToBoxAdapter 承担。
                         final padding = constraints.maxWidth < 600
                             ? 16.0
                             : 24.0;
@@ -1828,37 +1772,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _televisionGrid(
-    List<Drama> items,
-    double width, {
-    required String key,
-    ScrollController? controller,
-    Widget? footer,
-  }) {
-    // §2.1（B1）：列数收敛到 HnBreak 单点。
-    //
-    // ⚠ 这条 TV 路径**不在重设计范围**（用户明确：TV 无所谓，主要给平板/手机/PC
-    // 用；平板只横屏）。但它原先自带第 5 套列数算法
-    // （`((width-36)/150).floor().clamp(1,8)`），会让 §6.2 原则 2 的 CI grep 守卫
-    // （`crossAxisCount:` 只许命中 layout.dart）失效。故一并收敛到单点，
-    // 取值语义保持不变（TV 是 10-foot 大屏，按横屏档计算）。
-    final columns = HnBreak.posterColumns(
-      width,
-      landscape: true,
-      // TV 走的是整屏宽（没有左轨扣减），传 width 作 screenWidth 即按同一口径判形态。
-      screenWidth: width + HnBreak.railWide,
-    );
-    final tileWidth = (width - 36 - (columns - 1) * 14) / columns;
-    return RemoteGrid(
-      key: ValueKey('tv-grid-$key'),
-      itemKeys: items.map((item) => item.id).toList(),
-      columns: columns,
-      itemExtent: DramaTile.extentFor(context, tileWidth - 14) + 14,
-      controller: controller,
-      footer: footer,
-      padding: const EdgeInsets.fromLTRB(18, 2, 18, 18),
-      itemBuilder: (_, index, node, onFocus) =>
-          _catalogTile(items[index], focusNode: node, onFocus: onFocus),
-    );
-  }
+  // B7b：原 `_televisionGrid()`（TV 整屏宽网格 + 遥控"加载更多"按钮）已删除。
+  // 非 TV 走 `_catalog` 里的 `CustomScrollView`（含 Hero/今日首选/区块头）。
 }

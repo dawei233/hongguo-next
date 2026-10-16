@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'app_layout.dart';
 import 'catalog_sort.dart';
 import 'core_bridge.dart';
 import 'drama_actions.dart';
 import 'follow_state.dart';
 import 'local_store.dart';
 import 'models.dart';
-import 'remote_widgets.dart';
-import 'ui/layout.dart';
 import 'widgets.dart';
 
 class SavedLibrary extends StatefulWidget {
@@ -230,52 +227,16 @@ class _SavedLibraryState extends State<SavedLibrary> {
       );
       return LayoutBuilder(
         builder: (context, constraints) {
-          if (AppLayout.isTelevision(context)) {
-            // §2.1（B1）：列数收敛到 HnBreak 单点。
-            //
-            // 这里原是 home_screen `_televisionGrid` 的**逐字副本**
-            // （`((maxWidth-36)/150).floor().clamp(1,8)`）—— 同一算法写两遍，
-            // 正是 §0 诊断的「四处算法互不一致」来源之一（且不含 `crossAxisCount:`
-            // 字样，所以 §7 的 grep 守卫扫不到它，只能靠行为测试暴露）。
-            //
-            // ⚠ TV 不在重设计范围（用户明确：主要给平板/手机/PC 用），
-            // 但为满足 §6.2 原则 2（列数单点）一并收敛；取值口径不变。
-            final columns = HnBreak.posterColumns(
-              constraints.maxWidth,
-              landscape: true,
-              screenWidth: constraints.maxWidth + HnBreak.railWide,
-            );
-            final tileWidth =
-                (constraints.maxWidth - 36 - (columns - 1) * 14) / columns;
-            return Column(
-              children: [
-                ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: constraints.maxHeight * .5,
-                  ),
-                  child: SingleChildScrollView(child: Column(children: header)),
-                ),
-                Expanded(
-                  child: items.isEmpty
-                      ? empty
-                      : RemoteGrid(
-                          key: ValueKey(
-                            'saved-tv-${widget.history}-$_filter-${_search.text}',
-                          ),
-                          itemKeys: items.map((item) => item.id).toList(),
-                          columns: columns,
-                          itemExtent:
-                              DramaTile.extentFor(context, tileWidth - 14) + 14,
-                          itemBuilder: (_, index, node, onFocus) => _tile(
-                            items[index],
-                            focusNode: node,
-                            onFocus: onFocus,
-                          ),
-                        ),
-                ),
-              ],
-            );
-          }
+          // B7b：TV 专用网格分支已删除 —— 原先它用 `RemoteGrid` + 遥控
+          // "加载更多"，与 `home_screen` 的 `_televisionGrid` 是同一套。
+          //
+          // **必须一并删除**：B7b 删掉 `home_screen` 的 TV 分支后，若这里
+          // 还留着 TV 分支，同一个屏幕上「发现页海报」与「我的页海报」会算出
+          // 不同尺寸（实测 145.2 vs 139.6，被 `interface_test` 的海报对齐
+          // 用例抓到）—— 那正是 §0 要消灭的"同一件事两处实现"。
+          //
+          // 能力无损失：下方非 TV 分支的 header / 空态 / 分集网格齐全，
+          // 差别仅在于 header 从"独立滚动"变为"随整页滚动"。
           final padding = constraints.maxWidth < 600 ? 16.0 : 24.0;
           return CustomScrollView(
             key: PageStorageKey(

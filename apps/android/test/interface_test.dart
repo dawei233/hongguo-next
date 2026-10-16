@@ -223,35 +223,32 @@ void main() {
       // - 竖屏：底栏 3 目的地（发现 / 我的 / 设置），后两个页面在「我的」的
       //   三分段（`my-seg-N`：追剧 / 最近 / 下载）里
       // - 横屏：左轨 5 项（发现 / 追剧 / 最近 / 下载 / 设置），中间三项直入分段
-      // - TV：侧边栏 4 项（`tv-nav-N`）**未改**（TV 不在范围）
+      // - TV：**B7b 已删除 TV 专用侧边栏**（`tv-nav-N`）。TV 形态下
+      //   960×540 满足 `desktop`（≥840），故与平板一样走 `HnNavigationRail`
+      //   —— 这正是 §5.2「保留形态、统一实现」的目标。
       //
       // 本用例要比较的是「同一张海报在 catalog 与两个 saved 页上的尺寸是否一致」，
       // 与走哪条导航路径无关，故把路径改写成显式步骤，断言部分原样保留。
-      final tv = layout.$3;
-      final narrow = layout.$1.width < 840;
+      final wide = layout.$1.width >= 840;
       final steps = <Future<void> Function()>[
         () async {}, // 步骤 0：起步就在「发现」页
         () async {
           // 到「追剧」（saved，非 history）
-          if (tv) {
-            await tester.tap(find.byKey(const ValueKey('tv-nav-1')));
-          } else if (narrow) {
+          if (wide) {
+            await tester.tap(find.byKey(const ValueKey('rail-1')));
+          } else {
             await tester.tap(find.byKey(const ValueKey('bottom-nav-1')));
             await tester.pumpAndSettle();
             await tester.tap(find.byKey(const ValueKey('my-seg-0')));
-          } else {
-            await tester.tap(find.byKey(const ValueKey('rail-1')));
           }
           await tester.pumpAndSettle();
         },
         () async {
           // 到「最近观看」（saved，history）
-          if (tv) {
-            await tester.tap(find.byKey(const ValueKey('tv-nav-2')));
-          } else if (narrow) {
-            await tester.tap(find.byKey(const ValueKey('my-seg-1')));
-          } else {
+          if (wide) {
             await tester.tap(find.byKey(const ValueKey('rail-2')));
+          } else {
+            await tester.tap(find.byKey(const ValueKey('my-seg-1')));
           }
           await tester.pumpAndSettle();
         },
