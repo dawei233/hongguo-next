@@ -7,7 +7,6 @@ import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/player_menu.dart';
 import 'package:hongguo_next/player_screen.dart';
 import 'package:hongguo_next/playback_preferences.dart';
-import 'package:hongguo_next/television_controls.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart';
@@ -243,7 +242,7 @@ void main() {
   );
 
   testWidgets(
-    'large text settings and TV controls expose the danmaku preference',
+    'large text settings expose the danmaku preference',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(360, 640);
@@ -287,42 +286,10 @@ void main() {
       await settle(tester);
       expect(chosen?.danmaku, isFalse);
       expect(tester.takeException(), isNull);
-      TelevisionPlaybackSetting? selected;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () async {
-                  selected = await showDialog<TelevisionPlaybackSetting>(
-                    context: context,
-                    builder: (_) => TelevisionSettingsDialog(
-                      speed: 1,
-                      quality: 0,
-                      qualities: const [],
-                      favorite: false,
-                      onFavorite: () {},
-                      showDanmaku: true,
-                      danmaku: true,
-                      danmakuStatus: '这段暂无弹幕',
-                    ),
-                  );
-                },
-                child: const Text('打开电视设置'),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('打开电视设置'));
-      await settle(tester);
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('tv-danmaku-enabled')),
-      );
-      await tester.tap(find.byKey(const ValueKey('tv-danmaku-enabled')));
-      await settle(tester);
-      expect(selected?.danmaku, isFalse);
-      expect(tester.takeException(), isNull);
+      // B7a：本用例原先还有一段 TV 设置对话框（`TelevisionSettingsDialog` /
+      // `tv-danmaku-enabled`）的断言，已随 TV 控制层下线删除。
+      // 上半段（大字号下 `PlayerControls` 能暴露弹幕开关）**保留** ——
+      // 那是非 TV 路径，与本批无关。
     },
   );
 }

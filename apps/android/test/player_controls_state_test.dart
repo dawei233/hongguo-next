@@ -22,8 +22,20 @@ import 'player_fixtures.dart';
 /// - State 被替换 → `initState` 重新赋值 `_visible = widget.showOnPlaybackReady`，
 ///   用户唤出的控制条被重置（§2.2 违反）
 ///
-/// B4 采用方案 A（状态机抽到 controller / `_PlayerScreenState`）后本测试应通过；
-/// 若仍失败，说明状态机还挂在 widget 内（即上级说的「B7 必须提前的信号」）。
+/// ## 本测试的定位：A（§6/B4 状态机单点化）的**守卫**
+///
+/// 实测（2026-10-16）：本测试**当前通过** —— 手机两朝向都解析到同一个
+/// `PlayerControls`，State 延续。状态机重复（`PlayerControls` 4s vs
+/// `TelevisionControls` 5s）确实存在，但只在 `_television` 翻转时才可能换实现，
+/// 而 `_television` 是**设备级硬件标志**（Android `deviceInfo`，不随朝向变化），
+/// 实际触发面 ≈ 0。
+///
+/// 因此 A 被判定为**结构性收敛**（消掉两份 `_visible`/`_hideTimer` 重复、
+/// 把 5s/4s 差异显式参数化），**不是修正在发生的 bug**，优先级排在 B2/B3 之后。
+/// **本测试保留**：A 被推迟期间由它盯着"形态切换不得重建状态机"这条约束，
+/// 一旦有人为某形态新写一套控制层，这里会立刻红。
+///
+/// A 的完整收敛见 `docs/ANDROID-UI-REDESIGN.md` §6/B4。
 void main() {
   Future<void> settle(WidgetTester tester) async {
     for (var i = 0; i < 14; i++) {

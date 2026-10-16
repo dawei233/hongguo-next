@@ -1,4 +1,4 @@
-import 'package:hongguo_next/app_bottom_navigation.dart';
+import 'package:hongguo_next/ui/components/hn_navigation_rail.dart';
 import 'package:hongguo_next/home_screen.dart';
 import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/main.dart';
@@ -73,9 +73,10 @@ void main() {
     await capture('appearance-light-settings');
     await tester.tap(find.byType(BackButton).last);
     await tester.pumpAndSettle();
+    // B7a：`AppBottomNavigation` 已删（§5.2 由 `HnNavigationRail` 的 bottom
+    // 变体取代），断言改到新组件。语义不变：从设置页返回后仍停在「我的」。
     expect(
-      tester
-          .widget<AppBottomNavigation>(find.byType(AppBottomNavigation))
+      tester.widget<HnNavigationRail>(find.byType(HnNavigationRail))
           .selectedIndex,
       1,
     );

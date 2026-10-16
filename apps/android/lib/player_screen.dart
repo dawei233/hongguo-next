@@ -28,7 +28,6 @@ import 'playback_preferences.dart';
 import 'player_controls.dart';
 import 'player_interactions.dart';
 import 'player_menu.dart';
-import 'television_controls.dart';
 import 'ui/layout.dart';
 import 'ui/tokens.dart';
 import 'widgets.dart';
@@ -1273,15 +1272,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  Future<void> _toggleFavorite() async {
-    try {
-      await widget.store.toggleFavorite(widget.detail.drama);
-      if (mounted && !_closed) setState(() {});
-    } catch (_) {
-      _notice('追剧记录未能保存，请检查存储空间后重试');
-    }
-  }
-
+  // B7a：原 `_toggleFavorite()` 已删 —— 它唯一的调用者是 TV 设置对话框。
+  // **能力没有丢失**：播放器面板的 `onFavorite`（下方 `_openPanel` 的
+  // `PlayerMenuSheet` 参数）直接调 `store.toggleFavorite`，非 TV 形态照常可追剧。
   Future<void> _toggleDanmaku() async {
     if (widget.detail.drama.source != 'hongguo') return;
     try {
@@ -1409,92 +1402,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     }
   }
 
-  void _seek(int seconds) {
-    final desired = _player.state.position + Duration(seconds: seconds);
-    final maxDuration = _player.state.duration;
-    final target = desired < Duration.zero
-        ? Duration.zero
-        : maxDuration > Duration.zero && desired > maxDuration
-        ? maxDuration
-        : desired;
-    unawaited(_seekTo(target));
-  }
-
-  Future<void> _televisionEpisodes(BuildContext context) async {
-    if (_panelOpen || _closed) return;
-    setState(() => _panelOpen = true);
-    int? index;
-    try {
-      index = await showDialog<int>(
-        context: context,
-        builder: (_) => Theme(
-          data: televisionTheme(AppTheme.dark),
-          child: TelevisionEpisodeDialog(
-            episodes: widget.detail.episodes,
-            currentIndex: _index,
-          ),
-        ),
-      );
-    } finally {
-      if (mounted && !_closed) setState(() => _panelOpen = false);
-    }
-    if (index != null && mounted && !_closed && index != _index) {
-      await _play(index);
-    }
-  }
-
-  Future<void> _televisionSettings(BuildContext context) async {
-    if (_panelOpen || _closed) return;
-    setState(() => _panelOpen = true);
-    TelevisionPlaybackSetting? selection;
-    try {
-      selection = await showDialog<TelevisionPlaybackSetting>(
-        context: context,
-        builder: (menuContext) => AnimatedBuilder(
-          animation: Listenable.merge([_danmaku, _preloader]),
-          builder: (_, _) => Theme(
-            data: televisionTheme(AppTheme.dark),
-            child: TelevisionSettingsDialog(
-              speed: _speed,
-              quality: _requestedQuality,
-              qualities: _plan?.qualities ?? [],
-              favorite: widget.store.isFavorite(widget.detail.drama.id),
-              onFavorite: _toggleFavorite,
-              autoAdvance: _autoAdvance,
-              danmaku: _danmakuEnabled,
-              showDanmaku: widget.detail.drama.source == 'hongguo',
-              danmakuStatus: _danmaku.status,
-              onRetryDanmaku: _danmaku.canRetry ? _danmaku.retry : null,
-              preload: _preloadEnabled,
-              preloadStatus: _preloader.status,
-              enhancement: _enhancementForUi,
-              onCompareEnhancement: () {
-                unawaited(_enhancement.toggleCompare());
-                Navigator.pop(menuContext);
-              },
-            ),
-          ),
-        ),
-      );
-    } finally {
-      if (mounted && !_closed) setState(() => _panelOpen = false);
-    }
-    if (selection == null || !mounted || _closed) return;
-    try {
-      await _setPreferences(
-        _preferences.copyWith(
-          speed: selection.speed,
-          quality: selection.quality,
-          autoAdvance: true,
-          danmaku: selection.danmaku,
-          preload: true,
-          enhancement: selection.enhancement,
-        ),
-      );
-    } catch (_) {
-      _notice('播放偏好未能保存，请重试');
-    }
-  }
+  // B7a：原 `_seek(int seconds)`（相对跳转）已删 —— 它唯一的调用者是
+  // `TelevisionControls` 的 ±10s 按钮。`PlayerControls` 走绝对定位的
+  // `_seekTo(Duration)`，能力等价且更精确。
+  // B7a：TV 选集/设置对话框（`_televisionEpisodes` / `_televisionSettings`）
+  // 随 `TelevisionControls` 一并删除 —— 它们的唯一调用者就是那套 TV 控制层，
+  // 删掉控制层后已是死代码（非 TV 形态走 `_openPanel` 的底部面板路径）。
 
   void _back() {
     if (_showFullscreen && !_television) {
@@ -1757,31 +1670,17 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   Widget _videoPane(BuildContext context) {
-    final videoTheme = _television
-        ? televisionTheme(AppTheme.dark)
-        : AppTheme.dark;
+    // B7a：TV 主题随 `TelevisionControls` 一并下线，播放器恒用 AppTheme.dark
+    // （§0 的设计口径：视频区始终深色，与界面亮暗无关）。
+    final videoTheme = AppTheme.dark;
     final title =
         '${widget.detail.drama.title} · 第 ${widget.detail.episodes[_index].number} 集${_plan?.local == true ? ' · 本地' : ''}${widget.detail.episodes[_index].vip ? ' · VIP 试看' : ''}${(_plan?.routeIndex ?? 0) > 0 ? ' · 线路 ${_plan!.routeIndex + 1}' : ''}';
     final hideOverlayForPictureInPicture = _pictureInPictureVisible;
+    // B7a：TV 控制层（`TelevisionControls`）已下线，`PlayerControls` 成为
+    // **唯一**控制层。§2.2 原本要求的"一份实现 + layout 参数"由此达成 ——
+    // 不再有第二套 `_visible`/`_hideTimer`（4s vs 5s）需要同步。
     final Widget controls = hideOverlayForPictureInPicture
         ? const SizedBox.shrink()
-        : _television
-        ? TelevisionControls(
-            player: _player,
-            title: title,
-            enabled: !_loading && _error == null,
-            showOnPlaybackReady: _showControlsOnPlaybackReady,
-            enhancement: _enhancementForUi,
-            onTogglePlayback: _togglePlayback,
-            onSeek: _seek,
-            onPrevious: _index > 0 ? () => _play(_index - 1) : null,
-            onNext: _index + 1 < widget.detail.episodes.length
-                ? () => _play(_index + 1)
-                : null,
-            onEpisodes: () => _televisionEpisodes(context),
-            onSettings: () => _televisionSettings(context),
-            onBack: _back,
-          )
         : PlayerControls(
             player: _player,
             interactions: _interactions,
