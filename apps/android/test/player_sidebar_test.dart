@@ -12,20 +12,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'fixtures.dart';
 import 'player_fixtures.dart';
 
-/// B5 回归测试：**平板横屏下选集侧栏常驻**（`ANDROID-UI-REDESIGN.md` §4.2.2）。
+/// 播放器选集侧栏的回归测试（`ANDROID-UI-REDESIGN.md` §4.2.2）。
 ///
-/// 改造前的缺陷：播放器 `build` 里 `if (fullscreen) return _videoPane(context)`
-/// —— 全屏**没有任何侧栏**。而平板横屏观看恰是全屏（`_showFullscreen` 在横屏且
-/// 宽高比 ≥1 时为真），所以主力形态下永远看不到常驻选集，只能按「选集」弹 Sheet
-/// —— 正是规范要消除的两次点击（点选集 → 选集数 → 关闭）。
+/// ## 两个方向都要锁（否则下次又会两边错一边）
 ///
-/// 本文件锁住三件事：
-/// 1. 平板横屏出现 B5 侧栏（宽 [HnBreak.episodeSidebarWidth]，体内固定
-///    [HnBreak.episodeSidebarColumns] 列）
-/// 2. 手机竖屏不出现
-/// 3. 手机横屏（宽 <900，未达 §2 平板门槛）**不出现 B5 侧栏**
-///    —— 这条防的是「840 阈值与 §2 的 900 混用」：非全屏宽布局另有 312/210
-///    两档既有侧栏，若把它们的宽度也改成 300，手机上就会冒出平板侧栏。
+/// - **平板横屏「非全屏」→ 有常驻侧栏**（B5 的收益：换集从两次点击变一次）
+/// - **平板横屏「全屏」→ 无侧栏**（沉浸观影，纯画面）
+/// - 手机竖屏 / 手机横屏（未达 §2 平板门槛）→ 无常驻侧栏
+///
+/// ## 历史：这里发生过一次方向性错误，两个方向都错过
+///
+/// **第一次**（B5 之前）：播放器 build 里是 `if (fullscreen) return
+/// _videoPane(context)` —— 全屏没有侧栏。B5 认为这是缺陷（主力形态=平板横屏
+/// 观看=全屏，于是永远看不到常驻选集），把侧栏加进了**全屏分支**。
+///
+/// **第二次**（B5 之后，用户真机反馈「安卓的播放界面咋把播放选集列表也常驻了
+/// 全屏也不消失」）：B5 的错误在于**把「横屏」与「全屏」当成同一件事**。
+/// 横屏布局可以有侧栏，**全屏不该有** —— 全屏的语义是沉浸观影，常驻 300px
+/// 侧栏会挤占画面，成了退不出的干扰。
+///
+/// **正确行为**：非全屏的平板横屏常驻侧栏（保留 B5 收益）；全屏下**刻意不放**
+/// 侧栏，选集走「选集」按钮唤出的面板。**全屏无侧栏是正确行为，不是遗漏**
+/// —— 别再把它"优化"回去。
 void main() {
   Future<void> settle(WidgetTester tester) async {
     for (var i = 0; i < 12; i++) {
@@ -112,7 +120,7 @@ void main() {
     return find.byWidgetPredicate((_) => false);
   }
 
-  testWidgets('平板横屏：选集侧栏常驻，宽 300，体内固定 4 列', (tester) async {
+  testWidgets('平板横屏·非全屏：选集侧栏常驻，宽 300，体内固定 4 列', (tester) async {
     final repository = RouteRepository();
     final player = ScriptedPlayer();
     await mount(
@@ -121,26 +129,48 @@ void main() {
       player,
       // 1200×800 是 §2 形态矩阵里平板横屏的代表尺寸。
       size: const Size(1200, 800),
-      // 横屏片源（16:9）→ `_aspectRatio >= 1` → 自动进全屏，
-      // 即这条用例覆盖的正是「全屏下的常驻侧栏」。
-      videoSize: const Size(1920, 1080),
+      // **刻意不给 videoSize** —— 竖屏片源 → `_aspectRatio` 保持 9/16 < 1
+      // → `_showFullscreen` 为假 → 走「非全屏」路径。
+      // 这正是 B5 收益成立的那条路径：常驻侧栏、换集一次点击。
     );
 
     final sidebar = b5Sidebar(tester);
-    expect(sidebar, findsOneWidget);
+    expect(sidebar, findsOneWidget, reason: '非全屏平板横屏应有常驻选集侧栏');
     expect(
       find.descendant(of: sidebar, matching: find.byType(EpisodeBrowser)),
       findsOneWidget,
     );
-
-    // 平板横屏宽高比 ≥1 → `_showFullscreen` 为真，即这条断言覆盖的是
-    // **全屏状态下的常驻侧栏**（改造前全屏分支直接返回 _videoPane，没有侧栏）。
     expect(
       tester.widget<RemoteGrid>(
         find.descendant(of: sidebar, matching: find.byType(RemoteGrid)).first,
       ).columns,
       HnBreak.episodeSidebarColumns,
     );
+
+    await unmount(tester, player);
+  });
+
+  testWidgets('平板横屏·全屏：**不**出现常驻侧栏（沉浸观影）', (tester) async {
+    final repository = RouteRepository();
+    final player = ScriptedPlayer();
+    await mount(
+      tester,
+      repository,
+      player,
+      size: const Size(1200, 800),
+      // 横屏片源（16:9）→ `_aspectRatio >= 1` → `_showFullscreen` 为真
+      // → 真的经过 fullscreen 为真的分支（不是直接调私有构造）。
+      videoSize: const Size(1920, 1080),
+    );
+
+    // 这是用户真机反馈的那个 bug：全屏下侧栏不该常驻。
+    expect(
+      b5Sidebar(tester),
+      findsNothing,
+      reason: '全屏=沉浸观影，不该有常驻侧栏（用户反馈"全屏也不消失"）',
+    );
+    // 画面区仍在。
+    expect(find.byType(EpisodeBrowser), findsNothing);
 
     await unmount(tester, player);
   });

@@ -1580,33 +1580,29 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final desktop = constraints.maxWidth >= 840;
-                        // §4.2.2（B5）：**平板横屏下选集侧栏常驻**。
+                        // §4.2.2：**平板横屏「非全屏」下选集侧栏常驻**。
                         //
-                        // 改造前这里是 `if (fullscreen) return _videoPane(context)`
-                        // —— 全屏**完全没有侧栏**。而平板横屏观看恰是全屏
-                        // （`_showFullscreen` 在横屏且宽高比 ≥1 时为真，见 1185 行），
-                        // 于是主力形态下永远看不到常驻选集，只能按「选集」弹 Sheet
-                        // —— 正是规范要消除的两次点击（点选集 → 选集数 → 关闭）。
+                        // ⚠ 全屏下**刻意不放侧栏** —— 这是正确行为，不是遗漏：
+                        // 全屏的语义是**沉浸观影**，常驻 300px 侧栏会挤占画面；
+                        // 用户真机反馈「把播放选集列表也常驻了，全屏也不消失」
+                        // 正是 B5 引入的回归。
                         //
+                        // B5 当时的判断错在**把「横屏」与「全屏」当成同一件事**：
+                        // 它看到平板横屏观看恰为全屏（`_showFullscreen` 在横屏且
+                        // 宽高比 ≥1 时为真），就推断"主力形态下永远看不到常驻选集"，
+                        // 于是把侧栏加进了全屏分支。但横屏布局可以有侧栏，
+                        // **全屏不该有** —— 集入口由「选集」按钮唤出面板承担。
+                        //
+                        // 保留 B5 的收益：非全屏的平板横屏仍常驻侧栏（见下方分支），
+                        // "换集从两次点击变一次"在该路径上仍然成立。
+                        if (fullscreen) {
+                          // 全屏 = 纯画面（沉浸）。选集走「选集」按钮的面板。
+                          return _videoPane(context);
+                        }
                         // 判定用 HnBreak 的形态（§2.1：只认宽 + 朝向），
                         // 而非上面的 `desktop`（840 阈值与 §2 的 900 不一致）。
                         final form = HnBreak.formOf(constraints.biggest);
                         final sidebar = form == HnForm.tabletLandscape;
-                        if (fullscreen && sidebar) {
-                          // 平板横屏全屏：画面区 Expanded + 选集侧栏常驻。
-                          return Row(
-                            children: [
-                              Expanded(child: _videoPane(context)),
-                              SizedBox(
-                                width: HnBreak.episodeSidebarWidth,
-                                child: _episodePanel(compact: true),
-                              ),
-                            ],
-                          );
-                        }
-                        if (fullscreen) {
-                          return _videoPane(context);
-                        }
                         // 非全屏的宽布局：保持**既有口径**（desktop 阈值 840 +
                         // 312/210 两档宽），不属 B5 改动面 —— B5 只负责
                         // 「平板横屏（含全屏）下常驻侧栏」。
@@ -1615,7 +1611,8 @@ class _PlayerScreenState extends State<PlayerScreen>
                         // episodeSidebarWidth(300)，使 844×390 这类
                         // 「宽 ≥840 但未达 §2 平板门槛 900」的横屏窗口也出现 300 宽侧栏，
                         // 与 §2 形态矩阵（该尺寸属手机横屏）冲突。已还原为 312。
-                        if (desktop ||
+                        if (sidebar ||
+                            desktop ||
                             constraints.maxWidth >
                                 constraints.maxHeight * 1.3) {
                           return Row(
@@ -1628,8 +1625,17 @@ class _PlayerScreenState extends State<PlayerScreen>
                                 ),
                               ),
                               SizedBox(
-                                width: desktop ? 312 : 210,
-                                child: _episodePanel(),
+                                // 平板横屏用 §4.2.2 的 300 宽侧栏（4 列 × 44）；
+                                // 其余宽布局保持既有 312/210 两档。
+                                width: sidebar
+                                    ? HnBreak.episodeSidebarWidth
+                                    : desktop
+                                    ? 312
+                                    : 210,
+                                child: _episodePanel(
+                                  // 平板横屏侧栏走 compact（固定 4 列 × 44px）。
+                                  compact: sidebar,
+                                ),
                               ),
                             ],
                           );
