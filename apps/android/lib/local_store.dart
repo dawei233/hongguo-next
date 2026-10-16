@@ -53,9 +53,11 @@ class LocalStore extends ChangeNotifier {
   int _failures = 0;
   bool _sourcesUnlocked = false;
   bool _gateEnabled = false;
-  // [红果漫剧补丁] 真果鉴（--all-sources）默认全站源可见：密码锁默认关闭状态。
-  // 红果鉴保持上游行为（仅 4 个默认源）。
-  bool _gateOff = allSourcesEnabled;
+  // hongguo-next 的产品决定（2026-10-16）：不做编译期分版，但**也不默认全源可见**——
+  // 敏感站源（黄豆/剧果/野果/帝果/黄果）默认隐藏，由用户在站源管理里输密码解锁。
+  // 上游用 allSourcesEnabled（编译期 ALL_SOURCES）当这个默认值；本仓不再分版，
+  // 默认 false（密码锁激活）。用户改过的偏好由 _loadSourceGate 覆盖。
+  bool _gateOff = false;
   String _gateSalt = '';
   String _gateHash = '';
   DateTime _retryAfter = DateTime(2000);

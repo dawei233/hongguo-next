@@ -169,7 +169,7 @@ func TestSourceIDEnumMatchesContract(t *testing.T) {
 }
 
 // TestSourceDisplayNamesAndVisibility 锁定注册表里两个 UI 直显事实：
-// 每个对外源都有中文显示名；默认可见（无需解锁）的恰好是 primary 的 4 个。
+// 每个对外源都有中文显示名；默认可见（无需解锁）的恰好是 primary 的 6 个。
 func TestSourceDisplayNamesAndVisibility(t *testing.T) {
 	want := map[source.ID]string{
 		source.Hongguo:     "红果",
@@ -198,18 +198,21 @@ func TestSourceDisplayNamesAndVisibility(t *testing.T) {
 		}
 		primary++
 	}
-	if primary != 4 {
-		t.Errorf("默认可见（无需解锁）的站源应为 4 个，得到 %d", primary)
+	// hongguo-next 产品决定（2026-10-16）：默认可见 6 个 —— 红果/韩小圈/鬼片/青空
+	// 加 C 侧移植来的西饭/河马；其余 restricted 需密码解锁。上一版是 4 个且把
+	// 西饭/河马 算作需解锁，那是照抄上游注册表，本仓已把 C 的两个源并入默认可见。
+	if primary != 6 {
+		t.Errorf("默认可见（无需解锁）的站源应为 6 个，得到 %d", primary)
 	}
-	for _, id := range []source.ID{source.Hongguo, source.Hanxiaoquan, source.Guipian, source.Sorani} {
+	for _, id := range []source.ID{source.Hongguo, source.Hanxiaoquan, source.Guipian, source.Sorani, source.Xifan, source.Hema} {
 		if source.RequiresUnlock(id) {
 			t.Errorf("%q 属注册表 primaryValues，不应要求解锁", id)
 		}
 	}
-	// 需解锁的 7 个 = B 注册表 restrictedValues 的 5 个（黄果按组算一个）+ C 侧独有 2 个。
+	// 需解锁的 5 个 = B 注册表 restrictedValues 的 5 个（黄果按组算一个）。
+	// C 侧的西饭/河马已并入默认可见（2026-10-16 产品决定），不再要求解锁。
 	for _, id := range []source.ID{
 		source.Huangdou, source.Huangju, source.Yeguo, source.DSD, source.Huangguo,
-		source.Xifan, source.Hema,
 	} {
 		if !source.RequiresUnlock(id) {
 			t.Errorf("%q 不在 primaryValues 内，应要求解锁", id)

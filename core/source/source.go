@@ -95,24 +95,28 @@ func IsKnown(id ID) bool {
 	return ok
 }
 
-// IsPrimary 报告该站源是否属注册表的 primaryValues：默认可见、无需解锁。
+// IsPrimary 报告该站源是否默认可见、无需解锁。
 //
-// 恰好是 4 个：hongguo / hanxiaoquan / guipian / sorani。
+// 恰好是 6 个：hongguo 红果 / hanxiaoquan 韩小圈 / guipian 鬼片 / sorani 青空，
+// 外加 C 侧移植来的 xifan 西饭 / hema 河马 —— 后两个已并入本仓的注册表
+// （apps/android/lib/models.dart 的 primaryValues 同为这 6 个）。
+//
+// 上一版这里只有 4 个，且把 xifan/hema 归为「需解锁」；那是照抄 B 的注册表，
+// 而本仓已把 C 的两个源并入默认可见（产品决定 2026-10-16：短剧聚合，以红果为主，
+// 西饭/河马 与其余四个同级）。
 func IsPrimary(id ID) bool {
 	switch id {
-	case Hongguo, Hanxiaoquan, Guipian, Sorani:
+	case Hongguo, Hanxiaoquan, Guipian, Sorani, Xifan, Hema:
 		return true
 	default:
 		return false
 	}
 }
 
-// RequiresUnlock 报告该站源是否属注册表的 restrictedValues（默认隐藏、解锁后可见）。
+// RequiresUnlock 报告该站源是否属 restrictedValues（默认隐藏、解锁后可见）。
 //
 // 规则同注册表的 visibleValues：未解锁时只留 primaryValues，其余已知源都要解锁。
-// C 侧独有的 Xifan / Hema 不在 B 的注册表里，但它们同样不在 primaryValues 中，
-// 因此按同一规则要求解锁；未知 ID 一律返回 false —— 未知 ID 是应被拒绝的输入，
-// 不是「需解锁的源」。
+// 未知 ID 一律返回 false —— 未知 ID 是应被拒绝的输入，不是「需解锁的源」。
 func RequiresUnlock(id ID) bool {
 	return IsKnown(id) && !IsPrimary(id)
 }

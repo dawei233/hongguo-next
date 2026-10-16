@@ -1,4 +1,3 @@
-import 'package:hongguo_next/app_build.dart';
 import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/source_gate_dialog.dart';
 import 'package:hongguo_next/source_gate_taps.dart';
@@ -23,13 +22,18 @@ void main() {
   test('default visibility hides restricted sources', () async {
     final store = await create();
     expect(store.sourceGateEnabled, isFalse);
+    // 新语义（2026-10-16）：密码锁默认激活（_gateOff=false），未解锁。
     expect(store.sourcesUnlocked, isFalse);
-    expect(
-      store.sources.map((site) => site.id),
-      allSourcesEnabled
-          ? ['hongguo', 'hanxiaoquan', 'guipian', 'sorani']
-          : ['hongguo'],
-    );
+    expect(store.sources.map((site) => site.id), [
+      // hongguo-next 默认 6 个 primary 源（红果/韩小圈/鬼片/青空 +
+      // hongguo-drama 移植来的西饭/河马），不再编译期分版。
+      'hongguo',
+      'hanxiaoquan',
+      'guipian',
+      'sorani',
+      'xifan',
+      'hema',
+    ]);
     expect(store.allowsSource('huangdou'), isFalse);
     expect(store.allowsSource('hongguo'), isTrue);
     // 未启用密码锁时无处输入密码，需要先在弹窗里启用。
@@ -42,20 +46,23 @@ void main() {
     await store.enableSourceGate('666');
     expect(store.sourceGateEnabled, isTrue);
     expect(store.sourcesUnlocked, isTrue);
-    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
+    // 解锁后 primary 6 + restricted 7 = 13 个站源全可见（加了西饭/河马）。
+    expect(store.sources.length, 13);
 
     store.lockSources();
     expect(store.sourcesUnlocked, isFalse);
-    expect(store.sources.length, allSourcesEnabled ? 4 : 1);
+    // 重新锁定后回到默认的 6 个 primary 源。
+    expect(store.sources.length, 6);
     expect(store.allowsSource('huangdou'), isFalse);
     expect(store.allowsSource('hongguo'), isTrue);
-    if (allSourcesEnabled) expect(store.allowsSource('sorani'), isTrue);
+    // 青空是 primary 源，无需解锁即可见（不再依赖编译期分版）。
+    expect(store.allowsSource('sorani'), isTrue);
 
     await expectLater(store.unlockSources('777'), throwsStateError);
     expect(store.sourcesUnlocked, isFalse);
     await store.unlockSources('666');
     expect(store.sourcesUnlocked, isTrue);
-    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
+    expect(store.sources.length, 13);
   });
 
   test('a saved gate hides sources again after restart', () async {
@@ -66,19 +73,21 @@ void main() {
     addTearDown(restarted.dispose);
     expect(restarted.sourceGateEnabled, isTrue);
     expect(restarted.sourcesUnlocked, isFalse);
-    expect(restarted.sources.length, allSourcesEnabled ? 4 : 1);
+    // 重启后解锁态不保留，只剩默认的 6 个 primary 源。
+    expect(restarted.sources.length, 6);
     await restarted.unlockSources('666');
     expect(restarted.sourcesUnlocked, isTrue);
   });
 
-  test('disabling the gate restores every compiled source', () async {
+  test('disabling the gate restores every registered source', () async {
     final store = await create();
     await store.enableSourceGate('666');
     store.lockSources();
     await store.disableSourceGate();
     expect(store.sourceGateEnabled, isFalse);
     expect(store.sourcesUnlocked, isTrue);
-    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
+    // 关闭密码锁恢复全部已注册站源（6 primary + 7 restricted，加西饭/河马）。
+    expect(store.sources.length, 13);
   });
 
   test('an invalid pin must be 3 to 12 digits', () async {
@@ -119,18 +128,20 @@ void main() {
     });
     expect(store.configurationError, isNull);
     expect(store.sourceGateEnabled, isFalse);
+    // 损坏的门控记录按默认状态处理：密码锁激活（未解锁），只剩 6 个 primary 源。
     expect(store.sourcesUnlocked, isFalse);
-    expect(store.sources.length, allSourcesEnabled ? 4 : 1);
+    expect(store.sources.length, 6);
   });
 
-  test('a user-disabled gate keeps every compiled source visible', () async {
+  test('a user-disabled gate keeps every registered source visible', () async {
     final store = await create({
       'sourceGateEnabled': false,
       'sourceGateOff': true,
     });
     expect(store.sourceGateEnabled, isFalse);
     expect(store.sourcesUnlocked, isTrue);
-    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
+    // 用户主动关闭密码锁（sourceGateOff=true）时全部已注册站源可见（13 个）。
+    expect(store.sources.length, 13);
   });
 
   // 密码锁弹窗含动画与异步回调，用固定步进代替 pumpAndSettle，

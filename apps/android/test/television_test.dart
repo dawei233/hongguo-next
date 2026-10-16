@@ -126,6 +126,10 @@ void main() {
           Focus.of(tester.element(title)).requestFocus();
           await tester.pumpAndSettle();
           await press(tester, LogicalKeyboardKey.select);
+          // 新语义（2026-10-16）：默认 6 个 primary 源（加西饭/河马）> 1 组，
+          // 弹窗首行是「全部站源」分组；遥控器第一次按下方向键先进入该行，
+          // 之后每按一次移一行 —— 三次才到第 2 个站源（韩小圈）。
+          await press(tester, LogicalKeyboardKey.arrowDown);
           await press(tester, LogicalKeyboardKey.arrowDown);
           await press(tester, LogicalKeyboardKey.arrowDown);
           await press(tester, LogicalKeyboardKey.select);

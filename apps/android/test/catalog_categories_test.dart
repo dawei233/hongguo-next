@@ -122,8 +122,13 @@ void main() {
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     SharedPreferences.setMockInitialValues({});
-    final store = LocalStore(await SharedPreferences.getInstance());
+    // 注入测试用 pin 哈希（testStore）：fake async 下默认 isolate 哈希永不完成，
+    // 启用密码锁的用例会挂到超时（见 fixtures.dart 的说明）。
+    final store = testStore(await SharedPreferences.getInstance());
     addTearDown(store.dispose);
+    // 新语义（2026-10-16）：restricted 源（如黄果组的 huangguoai）默认隐藏，
+    // 密码锁默认激活；管理员先启用密码锁（启用即解锁）才能切到这些站源。
+    if (!SourceSite.isPrimary(source)) await store.enableSourceGate('666666');
     await store.setSource(source);
     await tester.pumpWidget(DuanjuApp(repository: repository, store: store));
     await tester.pumpAndSettle();

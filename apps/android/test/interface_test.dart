@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:hongguo_next/app_build.dart';
 import 'package:hongguo_next/core_bridge.dart';
 import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/main.dart';
@@ -10,12 +9,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fixtures.dart';
 import 'interface_fixtures.dart';
 
 void main() {
   Future<LocalStore> localStore() async {
     SharedPreferences.setMockInitialValues({});
-    final store = LocalStore(await SharedPreferences.getInstance());
+    // 注入测试用 pin 哈希（testStore）：fake async 下默认 isolate 哈希永不完成，
+    // 启用密码锁的用例会挂到超时（见 fixtures.dart 的说明）。
+    final store = testStore(await SharedPreferences.getInstance());
     addTearDown(store.dispose);
     return store;
   }
@@ -93,6 +95,9 @@ void main() {
     viewport(tester, const Size(390, 844));
     final repository = InterfaceRepository();
     final store = await localStore();
+    // 新语义（2026-10-16）：黄豆是 restricted 源，密码锁默认激活、默认隐藏；
+    // 管理员先启用密码锁（启用即解锁），遍历站源分组时才能到达黄豆。
+    await store.enableSourceGate('666666');
     await tester.pumpWidget(DuanjuApp(repository: repository, store: store));
     await tester.pumpAndSettle();
     Future<void> select(String name) async {
@@ -116,12 +121,9 @@ void main() {
         expect(find.text('会员合成剧'), findsWidgets);
       }
     }
-    if (!allSourcesEnabled) {
-      for (final source in SourceSite.knownValues.skip(1)) {
-        expect(find.widgetWithText(ChoiceChip, source.name), findsNothing);
-      }
-      return;
-    }
+    // 编译期分版已废弃（allSourcesEnabled 恒为 true），
+    // 原「单源版提前 return」分支删除；黄豆需先解锁密码锁才能到达，
+    // 上面的 enableSourceGate 已覆盖。
     await select('黄豆');
     expect(find.byTooltip('VIP：显示'), findsOneWidget);
     await tester.tap(find.byTooltip('VIP：显示'));

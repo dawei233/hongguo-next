@@ -1,7 +1,6 @@
 import 'package:hongguo_next/local_store.dart';
 import 'package:hongguo_next/main.dart';
 import 'package:hongguo_next/models.dart';
-import 'package:hongguo_next/app_build.dart';
 import 'package:hongguo_next/core_bridge.dart';
 import 'package:hongguo_next/detail_screen.dart';
 import 'package:hongguo_next/remote_widgets.dart';
@@ -30,7 +29,9 @@ void main() {
 
   Future<LocalStore> store() async {
     SharedPreferences.setMockInitialValues({});
-    return LocalStore(await SharedPreferences.getInstance());
+    // 注入测试用 pin 哈希（testStore）：fake async 下默认 isolate 哈希永不完成，
+    // 启用密码锁的用例会挂到超时（见 fixtures.dart 的说明）。
+    return testStore(await SharedPreferences.getInstance());
   }
 
   for (final size in [const Size(390, 844), const Size(1280, 800)]) {
@@ -43,26 +44,27 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final repository = FixtureRepository();
       final local = await store();
+      // 新语义（2026-10-16）：黄豆是 restricted 源，密码锁默认激活、默认隐藏；
+      // 管理员先启用密码锁（启用即解锁），站源切换里才会出现黄豆。
+      await local.enableSourceGate('666666');
       await tester.pumpWidget(app(repository, store: local));
       await tester.pumpAndSettle();
       expect(find.byTooltip('VIP：隐藏'), findsNothing);
       expect(find.text('测试短剧'), findsOneWidget);
-      if (allSourcesEnabled) {
-        await tester.tap(find.byKey(const ValueKey('source-switch')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('黄豆'));
-        await tester.pumpAndSettle();
-        expect(find.text('会员测试剧'), findsNothing);
-        expect(find.byTooltip('VIP：隐藏'), findsOneWidget);
-        await tester.tap(find.byTooltip('VIP：隐藏'));
-        await tester.pumpAndSettle();
-        expect(find.byTooltip('VIP：显示'), findsOneWidget);
-        expect(find.text('会员测试剧'), findsOneWidget);
-        await tester.tap(find.byTooltip('VIP：显示'));
-        await tester.pumpAndSettle();
-      } else {
-        expect(find.text('黄豆'), findsNothing);
-      }
+      // 编译期分版已废弃（allSourcesEnabled 恒为 true），原「单源版」分支删除；
+      // 黄豆需先解锁密码锁才能切换，上面的 enableSourceGate 已覆盖。
+      await tester.tap(find.byKey(const ValueKey('source-switch')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('黄豆'));
+      await tester.pumpAndSettle();
+      expect(find.text('会员测试剧'), findsNothing);
+      expect(find.byTooltip('VIP：隐藏'), findsOneWidget);
+      await tester.tap(find.byTooltip('VIP：隐藏'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('VIP：显示'), findsOneWidget);
+      expect(find.text('会员测试剧'), findsOneWidget);
+      await tester.tap(find.byTooltip('VIP：显示'));
+      await tester.pumpAndSettle();
       expect(find.text('会员测试剧'), findsNothing);
       await tester.tap(find.text('测试短剧'));
       await tester.pumpAndSettle();

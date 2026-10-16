@@ -705,6 +705,14 @@ type Source interface {
 
 > **v5 修正（本次 M1 返工）**：上一版按 core 的 provider 常量计数，得到「13 个源」，**多算了两个**：`cloudfront`（黄果旧版）是黄果的**第三个 facet** 而非独立源；`legacy`（旧接口自动发现）是**回退机制**而非源，注册表里根本没有它。权威依据是 B 的站源注册表 `lib/models.dart` 的 `SourceSite.primaryValues` / `restrictedValues`（B 端 UI 的站源列表即由它派生，`groupId` / `groupName` / `entryName` 三个 getter 是黄果分组的铁证）。因此对外源是 **11 个**：默认可见 4 个 + 解锁后可见 5 个（黄果算一个）+ C 侧移植 2 个。
 
+> **v6 修正（2026-10-16，产品决定）**：默认可见改为 **6 个** —— 红果 / 韩小圈 / 鬼片 / 青空
+> 加 C 侧移植来的**西饭 / 河马**（原表把这两个算作「需解锁」，那是照抄上游注册表；
+> 本仓是短剧聚合应用，西饭/河马 与其余四个同级）。需解锁的降为 **5 个**（黄豆 / 剧果 / 野果 /
+> 帝果 / 黄果）。同时**取消编译期分版**：上游用 `--dart-define=ALL_SOURCES` 分「红果鉴（单源）/
+> 真果鉴（多源）」两版、Dart 侧与 Go 侧的 edition 门控配对；本仓只做一版，但**不默认全源可见**
+> —— 密码锁默认激活（`LocalStore._gateOff = false`）。若两侧口径不一致，
+> `core_bridge.initialize()` 会秒抛「应用与原生核心的站源版本不一致」，应用打不开（真机实测）。
+
 原始来源计数：A 4 个、B 11 个 source 常量（其中 3 个是黄果的 facet、1 个是机制名）、C 3 个。
 
 **重复与合并情况**
@@ -738,8 +746,8 @@ type Source interface {
 | 7 | `yeguo` | 野果 | 需解锁 | B | Search, MultiQuality, DirectPlay |
 | 8 | `dsd` | 帝果 | 需解锁 | B | Search, Category, MultiQuality, EncryptedPlay |
 | 9 | `huangguo` | 黄果（facet：AI / 视频 / 旧版） | 需解锁 | B | Search, Category, Rank, **DirectPlay**, EncryptedPlay, MP4Sanitize（三个 facet 的并集；DirectPlay 来自旧版 facet） |
-| 10 | `xifan` | 西饭 | 需解锁 | C 移植 | Search, Category, MultiQuality, DirectPlay |
-| 11 | `hema` | 河马 | 需解锁 | C 移植 | Search, Category, MultiQuality, DirectPlay |
+| 10 | `xifan` | 西饭 | **默认可见** | C 移植 | Search, Category, MultiQuality, DirectPlay |
+| 11 | `hema` | 河马 | **默认可见** | C 移植 | Search, Category, MultiQuality, DirectPlay |
 
 > Go 侧一一对应：`core/source/source.go` 的 ID 常量（含中文名 `DisplayName` 与 `IsPrimary` / `RequiresUnlock`）、`contracts/source-caps.schema.json` 的 `$defs.sourceId.enum`，以及 `core/source/adapter` 的 `SourceIDs()` / `CoreSources()`（黄果在此展开为 `huangguoai` / `huangguo-video` / `cloudfront` 三个 core provider 名）。四处顺序一致，由 `core/source/source_caps_test.go` 与 `core/source/adapter/id_test.go` 断言。
 >

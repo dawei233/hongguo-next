@@ -14,30 +14,34 @@ void main() {
   const red = FixtureRepository.free;
   const other = FixtureRepository.vip;
 
-  test('edition sources include DSD only in the all-source build', () async {
+  test('restricted sources stay hidden until the source gate unlocks', () async {
     SharedPreferences.setMockInitialValues({'source': 'huangdou'});
     final store = testStore(await SharedPreferences.getInstance());
-    expect(appSlug, allSourcesEnabled ? 'zhenguojian' : 'hongguojian');
-    // 默认只显示红果、韩小圈、鬼片网与青空次元，其余站源需要密码解锁。
-    expect(store.sources.length, allSourcesEnabled ? 4 : 1);
-    expect(
-      SourceSite.values.any((source) => source.id == 'dsd'),
-      allSourcesEnabled,
-    );
-    expect(SourceSite.isAvailable('dsd'), allSourcesEnabled);
+    // 新语义（2026-10-16）：不再编译期分版（上游「红果鉴/真果鉴」两版废弃），
+    // 应用身份统一为 hongguo-next。
+    expect(appSlug, 'hongguo-next');
+    // hongguo-next 默认 6 个 primary 源（红果/韩小圈/鬼片/青空 + 新增西饭/河马），
+    // 其余 7 个 restricted 源默认隐藏，由密码锁解锁后可见。
+    expect(store.sources.length, 6);
+    // values = knownValues（不再编译期分版）：dsd 在注册表里且可用，
+    // 是否允许由密码锁与用户权限决定，而不是编译期裁剪。
+    expect(SourceSite.values.any((source) => source.id == 'dsd'), isTrue);
+    expect(SourceSite.isAvailable('dsd'), isTrue);
     expect(SourceSite.isKnown('dsd'), isTrue);
     expect(SourceSite.byId('dsd').name, '帝果');
+    // dsd 是 restricted 源：密码锁默认激活（_gateOff=false 且未解锁），所以默认不允许。
     expect(store.allowsSource('dsd'), isFalse);
     expect(store.source, 'hongguo');
     await store.enableSourceGate('666666');
     expect(store.sourcesUnlocked, isTrue);
-    expect(store.sources.length, allSourcesEnabled ? 11 : 1);
-    expect(store.allowsSource('dsd'), allSourcesEnabled);
+    // 解锁后 primary 6 + restricted 7 = 13 个站源全可见（加了西饭/河马）。
+    expect(store.sources.length, 13);
+    expect(store.allowsSource('dsd'), isTrue);
     store.dispose();
   });
 
   test(
-    'edition filtering preserves favorites and history through backup restore',
+    'visibility filtering preserves favorites and history through backup restore',
     () async {
       final history = [
         for (final drama in [red, other])
@@ -55,17 +59,18 @@ void main() {
         'history': jsonEncode(history),
       });
       final store = testStore(await SharedPreferences.getInstance());
-      // 管理员默认可见全部站源；这里仍显式启用密码锁，验证启用后行为一致。
+      // 管理员默认可见 6 个 primary 源；显式启用密码锁，验证解锁后行为一致。
       await store.enableSourceGate('666666');
-      expect(store.favorites.length, allSourcesEnabled ? 2 : 1);
-      expect(store.history.length, allSourcesEnabled ? 2 : 1);
-      expect(store.isFavorite(other.id), allSourcesEnabled);
-      expect(store.watched(other.id) != null, allSourcesEnabled);
+      // 解锁后 restricted 源(huangdou)也可见，红果与黄豆的记录都在。
+      expect(store.favorites.length, 2);
+      expect(store.history.length, 2);
+      expect(store.isFavorite(other.id), isTrue);
+      expect(store.watched(other.id) != null, isTrue);
       await store.toggleFavorite(red);
       final backup = await store.exportBackup();
       final library =
           (jsonDecode(backup)['libraries'] as Map)['default'] as Map;
-      // 导出读的是原始磁盘记录（exportBackup 不做版本过滤），
+      // 导出读的是原始磁盘记录（exportBackup 不做可见性过滤），
       // 受限站源 other(huangdou) 依旧保留在导出里。
       expect(
         (library['favorites'] as List).map((row) => (row as Map)['id']),
@@ -74,11 +79,15 @@ void main() {
       expect(library['history'], hasLength(2));
       await store.importBackup(backup);
       expect(store.preferences.getString('source'), 'huangdou');
-      expect(store.history, hasLength(allSourcesEnabled ? 2 : 1));
-      // 内存里的 favorites 会按当前版本可见站源过滤，两者语义不同。
-      expect(store.favorites.map((drama) => drama.id), [
-        if (allSourcesEnabled) other.id,
-      ]);
+      // 新语义：导入用 replace 覆盖全部偏好，密码锁凭据一并清掉，
+      // _gateOff=false → restricted 源(huangdou)默认隐藏：
+      // 历史只剩 primary 源 red，favorites（只剩 other/huangdou）被门控隐藏。
+      expect(store.history, hasLength(1));
+      expect(store.favorites.map((drama) => drama.id), isEmpty);
+      // 关闭密码锁（管理员）后全部站源可见，证明受限源记录确实被备份保留。
+      await store.disableSourceGate();
+      expect(store.history, hasLength(2));
+      expect(store.favorites.map((drama) => drama.id), [other.id]);
       store.dispose();
     },
   );
@@ -112,14 +121,16 @@ void main() {
       expect(store.profile.admin, isFalse);
       expect(store.profile.sources, ['huangdou']);
       expect(store.canDownload, isFalse);
-      expect(store.source, allSourcesEnabled ? 'huangdou' : '');
+      // 密码锁解锁后 restricted 源(huangdou)可见且可选。
+      expect(store.source, 'huangdou');
+      // 看红果不允许是用户权限（viewer 只授权 huangdou），与编译期分版无关。
       expect(store.allowsSource('hongguo'), isFalse);
-      expect(store.allowsSource('huangdou'), allSourcesEnabled);
+      expect(store.allowsSource('huangdou'), isTrue);
       store.dispose();
     },
   );
 
-  test('restored DSD profile data follows edition availability', () async {
+  test('restored DSD profile data shows after the gate unlocks', () async {
     SharedPreferences.setMockInitialValues({
       ...await gatePreferences(),
       'profiles': jsonEncode([
@@ -144,12 +155,10 @@ void main() {
     await unlockGate(store);
     expect(store.configurationError, isNull);
     expect(store.profile.sources, ['dsd']);
-    expect(
-      store.sources.map((source) => source.id),
-      allSourcesEnabled ? ['dsd'] : [],
-    );
-    expect(store.source, allSourcesEnabled ? 'dsd' : '');
-    expect(store.allowsSource('dsd'), allSourcesEnabled);
+    // 解锁后全部 13 个站源可见，viewer 只授权 dsd，所以列表里只有它。
+    expect(store.sources.map((source) => source.id), ['dsd']);
+    expect(store.source, 'dsd');
+    expect(store.allowsSource('dsd'), isTrue);
     store.dispose();
   });
 

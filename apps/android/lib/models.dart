@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'app_build.dart';
-
 class SourceSite {
   const SourceSite(this.id, this.name, this.description);
   final String id;
@@ -37,9 +35,16 @@ class SourceSite {
     '韩小圈',
     '韩剧 · 韩国电影 · 综艺动漫',
   );
+  // hongguo-drama 侧移植的两个源（core/source/providers/{xifan,hema}）。
+  // 上游注册表里没有它们（那是 hongguo-drama 独有），本仓并入后补上。
+  static const xifan = SourceSite('xifan', '西饭', '短剧 · 在线搜索');
+  static const hema = SourceSite('hema', '河马', '短剧 · 分类剧集');
 
-  /// 默认可见的站源：红果、韩小圈、鬼片网、青空次元。
-  static const primaryValues = [hongguo, hanxiaoquan, guipian, sorani];
+  /// 默认可见的站源（hongguo-next 的产品决定，2026-10-16）：
+  /// 红果、韩小圈、鬼片、青空，加 hongguo-drama 移植来的西饭、河马 —— 共 6 个。
+  /// **不再做编译期分版**（上游的「红果鉴/真果鉴」两版已废弃），但也不默认全源可见：
+  /// 其余站源仍走密码解锁（见 restrictedValues 与 LocalStore 的 sourceGate）。
+  static const primaryValues = [hongguo, hanxiaoquan, guipian, sorani, xifan, hema];
 
   /// 敏感站源：默认隐藏，输入解锁密码后才显示。
   static const restrictedValues = [
@@ -53,7 +58,9 @@ class SourceSite {
   ];
   static const knownValues = [...primaryValues, ...restrictedValues];
   static const allValues = [...primaryValues, ...restrictedValues];
-  static const values = allSourcesEnabled ? knownValues : [hongguo];
+  // 不再编译期分版（上游「红果鉴/真果鉴」两版已废弃）：全部已注册站源都在
+  // values 里；是否可见由 LocalStore 的 sourceGate（密码解锁）决定，见 visibleValues。
+  static const values = knownValues;
   static bool isAvailable(String id) => values.any((site) => site.id == id);
   static bool isKnown(String id) => allValues.any((site) => site.id == id);
   static bool isPrimary(String id) =>

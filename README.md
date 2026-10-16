@@ -24,7 +24,7 @@
 
 ## 特性（目标）
 
-- **11 个站源**统一在一个 `Source` 接口下：红果、韩小圈、鬼片、青空（默认可见），黄豆、剧果、野果、帝果、黄果（黄果含 AI / 视频 / 旧版三个 facet），加两个从本方 fork [dawei233/hongguo-drama](https://github.com/dawei233/hongguo-drama) 移植的西饭、河马。`cloudfront` 是黄果的旧版 facet，`legacy`（旧接口自动发现）只是回退机制，两者都不是独立站源。
+- **11 个站源**统一在一个 `Source` 接口下，**默认可见 6 个**：红果、韩小圈、鬼片、青空，加从 [dawei233/hongguo-drama](https://github.com/dawei233/hongguo-drama) 移植的西饭、河马；**其余 5 个需密码解锁**：黄豆、剧果、野果、帝果、黄果（黄果含 AI / 视频 / 旧版三个 facet）。`cloudfront` 是黄果的旧版 facet，`legacy`（旧接口自动发现）只是回退机制，两者都不是独立站源。
 - **跨源聚合搜索**：一次搜索打所有源，按标题/年份/集数归一去重，同一部剧可一键切换播放源。
 - **真弹幕**：带时间轴的官方弹幕（`offset_time`），签名内核用 Go 实现，用搬入的黄金向量做回归 + 每日联网探活。
 - **加密档直解**：`ffmpeg -decryption_key` 解密 + 自研 MP4 净化（剥 CENC 信令 box、重写 `stco/co64` 偏移），让严格 demuxer 也能播。

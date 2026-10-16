@@ -692,9 +692,10 @@ class _HomeScreenState extends State<HomeScreen> {
   });
 
   /// 连点「最近观看」6 次弹出站源密码锁（用于启用 / 关闭密码功能）。
-  /// 仅多源包（真果鉴）生效；红果鉴单源包无密码功能。
+  /// hongguo-next：不再编译期分版（上游的「真果鉴才有密码功能」随之废弃），
+  /// 敏感站源默认隐藏、需解锁，所以密码门控对唯一的一个版本生效。
   void _onNavSelected(int tab) {
-    if (allSourcesEnabled && tab == 2) {
+    if (tab == 2) {
       if (_recentTaps.register(tab)) {
         _openSourceGate();
         return;

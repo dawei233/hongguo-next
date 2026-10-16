@@ -119,7 +119,9 @@ class DownloadRepository extends FixtureRepository {
 void main() {
   Future<LocalStore> makeStore() async {
     SharedPreferences.setMockInitialValues({});
-    final store = LocalStore(await SharedPreferences.getInstance());
+    // 注入测试用 pin 哈希（testStore）：fake async 下默认 isolate 哈希永不完成，
+    // 启用密码锁的用例会挂到超时（见 fixtures.dart 的说明）。
+    final store = testStore(await SharedPreferences.getInstance());
     addTearDown(store.dispose);
     return store;
   }
@@ -286,6 +288,9 @@ void main() {
     size(tester, const Size(390, 844));
     final repository = DownloadRepository();
     final store = await makeStore();
+    // 新语义（2026-10-16）：帝果是 restricted 源，密码锁默认激活、默认隐藏；
+    // DetailScreen._play 要求 allowsSource 通过，需管理员先启用密码锁解锁。
+    await store.enableSourceGate('666666');
     final drama = const Drama(
       id: 'dsd:100',
       source: 'dsd',
@@ -298,14 +303,31 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(),
-        home: DetailScreen(drama: drama, repository: repository, store: store),
+        home: DetailScreen(
+          drama: drama,
+          repository: repository,
+          store: store,
+          // 播放会导航到 PlayerScreen；测试环境必须注入假播放器，
+          // 否则会创建 media_kit 原生播放器（需要 libmpv，测试环境没有）。
+          playerFactory: () => Player(platformPlayer: ScriptedPlayer()),
+          videoBuilder: (controls) => controls,
+        ),
       ),
     );
     await tester.pumpAndSettle();
+    // README:33：选集默认折叠，展开后才渲染分集按钮（与 widget_test 同款步骤）。
+    await tester.tap(find.textContaining('选集 ·'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('episode-1')));
     await tester.pump();
+    // 帝果 VIP 集不弹确认框（detail_screen 对 dsd 豁免 VIP 弹窗）。
     expect(find.text('这是一集 VIP 内容'), findsNothing);
-    expect(find.text('正在准备播放'), findsOneWidget);
+    // 新语义下播放直接启动：本地解析与假播放器都即时完成，
+    // 「正在准备播放」只是单帧内的瞬时加载态。MaterialPageRoute 约 300ms
+    // 入场动画未完成前新路由处于 offstage，补一帧过场后再断言播放页已推入。
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.byType(PlayerScreen), findsOneWidget);
+    expect(repository.localCalls, 1);
     expect(tester.takeException(), isNull);
   });
 
