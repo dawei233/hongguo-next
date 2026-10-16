@@ -42,7 +42,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # ⑤ 发布到 preview Release 需要：gh release create/upload 写 contents。
+  contents: write
 
 concurrency:
   group: build-android-${{ github.ref }}
@@ -313,3 +314,25 @@ jobs:
           # "Artifact storage quota has been hit"）。构建产物给 7 天足够下载，
           # 过期自动释放，不再长期占用配额。
           retention-days: 7
+
+      # ⑤ 发布到滚动的 preview Release。artifact 7 天就过期、且埋在 Actions 里
+      # 不易找，Release 才是安装包的固定住址 —— 固定下载地址：
+      #   https://github.com/dawei233/hongguo-next/releases/tag/preview
+      # 手动触发（workflow_dispatch）才发布，push 触发只出 artifact，
+      # 避免每次 push 都覆盖同一个 release 资产。
+      - name: ⑤ 发布到 preview Release（手动触发时）
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view preview --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create preview \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "红果 Next — 安卓 arm64 最新预览版" \
+              --notes "滚动更新的安卓预览版（arm64-v8a），每次手动触发 CI 时覆盖。
+  固定下载地址即本页；正式版本另行打 tag 发布。
+  来源链路与上游署名见仓库 NOTICE（GPL-3.0）。"
+          fi
+          gh release upload preview dist/hongguo-next-arm64-v8a.apk dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --clobber
+          echo ">> 已发布到 preview Release（覆盖旧资产）"

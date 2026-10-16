@@ -47,7 +47,15 @@ tools/           搬运脚本、向量校验工具
 
 ## 当前状态
 
-**架构设计阶段，尚未开工写实现代码。** 首批落地顺序见 `docs/ARCHITECTURE.md` §7（M1 vendor 与契约 → M2 弹幕 ∥ M3 站源与媒体 → M4 端侧）。
+## 下载
+
+- **安卓（arm64）最新预览版**：<https://github.com/dawei233/hongguo-next/releases/tag/preview> —— CI 手动触发时自动覆盖，校验和随附（debug 签名，可安装；正式上架前换 release keystore）
+- **正式版本**：<https://github.com/dawei233/hongguo-next/releases/latest>
+- **桌面端**：从源码构建 —— `cd apps/desktop && pnpm install && pnpm dist`（构建链就绪，含 `pnpm core:build` 编译内核）
+
+## 当前状态
+
+**M1–M4 已落地并推送**：Go 内核 vendor（11 个站源 / 弹幕签名 / MP4 净化）、`hncore-server`、安卓端整端 vendor + CI 构建链（APK 已产出并经 `.so` 进包与签名校验）、桌面端（Electron + React 19 + Tailwind v4 + shadcn + `@videojs/react` 10.x，三页面 + 真实内核端到端冒烟通过）。里程碑与验收标准见 `docs/ARCHITECTURE.md` §7。
 
 ## 许可与合规
 
