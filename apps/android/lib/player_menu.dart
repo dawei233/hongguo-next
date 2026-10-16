@@ -333,6 +333,7 @@ class PlayerEpisodeGrid extends StatelessWidget {
     this.keyPrefix = 'play-episode',
     this.compact = false,
     this.title = '选集',
+    this.watchedNumbers,
   });
   final List<Episode> episodes;
   final int currentIndex;
@@ -340,6 +341,9 @@ class PlayerEpisodeGrid extends StatelessWidget {
   final String keyPrefix;
   final bool compact;
   final String title;
+
+  /// §4.2.2：已看过的集号（显示 ✓ 并降色），由播放器按 store 的进度传入。
+  final Set<int>? watchedNumbers;
   @override
   Widget build(BuildContext context) => EpisodeBrowser(
     episodes: episodes,
@@ -350,5 +354,6 @@ class PlayerEpisodeGrid extends StatelessWidget {
     keyPrefix: keyPrefix,
     compact: compact,
     title: title,
+    watchedNumbers: watchedNumbers,
   );
 }

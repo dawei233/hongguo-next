@@ -73,6 +73,12 @@ abstract final class HnBreak {
   static const int keyboardColumns = 6;
   static const int episodeSidebarColumns = 4;
 
+  /// 播放器选集侧栏宽度（§4.2.2）。
+  static const double episodeSidebarWidth = 300;
+
+  /// 选集侧栏内单格高度（§4.2.2「4 列 × 44px」）。
+  static const double episodeSidebarExtent = 44;
+
   /// 形态判定：**只认宽 + 朝向**，不认设备类型（§2）。
   ///
   /// 注意判定顺序：先看是否达到平板横屏的「宽 ≥ 900 **且** 高 ≥ 600」门槛，

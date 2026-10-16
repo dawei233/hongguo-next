@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'ui/layout.dart';
+import 'ui/tokens.dart';
 import 'search_input.dart';
 import 'package:flutter/services.dart';
 
@@ -403,6 +404,7 @@ class RemoteEpisodeButton extends StatelessWidget {
     required this.onPressed,
     this.vip = false,
     this.current = false,
+    this.watched = false,
     this.compact = false,
     this.focusNode,
     this.onFocus,
@@ -410,6 +412,10 @@ class RemoteEpisodeButton extends StatelessWidget {
   final int number;
   final bool vip;
   final bool current;
+
+  /// §4.2.2：已看过的集显示 `✓` 并把文字降为 `foreground-muted`。
+  /// 调用方按 `store.watched(dramaId)?.episode` 与集号比较后传入。
+  final bool watched;
   final bool compact;
   final VoidCallback onPressed;
   final FocusNode? focusNode;
@@ -438,6 +444,11 @@ class RemoteEpisodeButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: compact ? 14 : 20,
                 fontWeight: current ? FontWeight.w700 : FontWeight.w500,
+                // §4.2.2：已看把文字降为 foreground-muted；当前集优先
+                //（它已用 primary 底 + onPrimary 字，见 RemoteTarget 的 selected）。
+                color: current || !watched
+                    ? null
+                    : Theme.of(context).extension<HongguoTokens>()?.fgMuted,
               ),
             ),
           ),
@@ -447,6 +458,15 @@ class RemoteEpisodeButton extends StatelessWidget {
               Icons.workspace_premium_rounded,
               color: Theme.of(context).colorScheme.tertiary,
               size: compact ? 15 : 18,
+            ),
+          ],
+          // §4.2.2 的「已看 ✓」标记。
+          if (watched && !current) ...[
+            SizedBox(width: compact ? 1 : 3),
+            Icon(
+              Icons.check_rounded,
+              color: Theme.of(context).extension<HongguoTokens>()?.fgMuted,
+              size: compact ? 12 : 15,
             ),
           ],
         ],

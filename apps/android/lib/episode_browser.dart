@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'app_layout.dart';
 import 'models.dart';
+import 'ui/layout.dart';
 import 'remote_widgets.dart';
 
 const episodePageSize = 50;
@@ -155,11 +156,15 @@ class EpisodeBrowser extends StatefulWidget {
     this.keyPrefix = 'episode',
     this.title = '选集',
     this.compact = false,
+    this.watchedNumbers,
   });
   final List<Episode> episodes;
   final ValueChanged<int> onSelected;
   final int? currentNumber;
   final Set<int>? selectedNumbers;
+
+  /// §4.2.2：已看过的集号集合（显示 ✓ 并降色）。null 表示不显示已看标记。
+  final Set<int>? watchedNumbers;
   final String keyPrefix;
   final String title;
   final bool compact;
@@ -232,26 +237,26 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
                     max(value, episode.number.toString().length),
               );
               final scale = MediaQuery.textScalerOf(context);
-              final columns =
-                  ((constraints.maxWidth - (widget.compact ? 8 : 36)) /
-                          max(
-                            widget.compact
-                                ? 64
-                                : television
-                                ? 100
-                                : 82,
-                            scale.scale(widget.compact ? 18 : 20) *
-                                    digits *
-                                    .65 +
-                                (widget.compact ? 28 : 40),
-                          ))
-                      .floor()
-                      .clamp(widget.compact ? 4 : 1, 12);
-              final extent = max(
-                widget.compact ? 46.0 : 56.0,
-                scale.scale(widget.compact ? 18 : 20) +
-                    (widget.compact ? 24 : 30),
-              );
+              // §4.2.2（B5）：播放器选集侧栏内**固定 4 列**（compact 模式）。
+              //
+              // 规范原文：「体：4 列 × 44px（HnBreak.episodeColumns 返回 8 是按整屏
+              // 算的，侧栏内固定 4）」。侧栏宽 300 与整屏宽是两回事 —— 用整屏算法
+              // 会得到 8 列，把 44px 的格子挤到 30px 出头。故 compact 走常量。
+              //
+              // 非 compact 的调用点（详情页 / 下载选择器）保持原算法：那些确实按
+              // 整屏宽排布，且要照顾集号位数与系统文字缩放。
+              final columns = widget.compact
+                  ? HnBreak.episodeSidebarColumns
+                  : ((constraints.maxWidth - 36) /
+                            max(
+                              television ? 100 : 82,
+                              scale.scale(20) * digits * .65 + 40,
+                            ))
+                        .floor()
+                        .clamp(1, 12);
+              final extent = widget.compact
+                  ? HnBreak.episodeSidebarExtent
+                  : max(56.0, scale.scale(20) + 30);
               final target = max(
                 0,
                 visible.indexWhere(
@@ -297,6 +302,10 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
                     number: episode.number,
                     vip: episode.vip,
                     compact: widget.compact,
+                    // §4.2.2：已看过的集显示 ✓ 并降色。由调用方传入集合
+                    //（播放器侧按 store.watched(dramaId) 的进度算）。
+                    watched: widget.watchedNumbers?.contains(episode.number) ??
+                        false,
                     current:
                         widget.selectedNumbers?.contains(episode.number) ??
                         episode.number == widget.currentNumber,
@@ -360,17 +369,18 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
   Widget _continuousGrid(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final television = AppLayout.isTelevision(context);
-      final scale = MediaQuery.textScalerOf(context);
-      final digits = widget.episodes.fold<int>(
-        1,
-        (value, episode) => max(value, episode.number.toString().length),
-      );
-      final minimum = max(40.0, scale.scale(14) * digits * .62 + 22);
-      final columns = ((constraints.maxWidth - 12) / minimum).floor().clamp(
-        5,
-        television ? 12 : 10,
-      );
-      final extent = max(34.0, scale.scale(14) + 18);
+      // §4.2.2（B5）：**播放器选集侧栏内固定 4 列 × 44px**。
+      //
+      // 这里原先是 compact 专用的一套算术
+      // （`((maxWidth-12)/minimum).floor().clamp(5, 10|12)`），下限硬编码 5、
+      // 且按集号位数与文字缩放浮动 —— 与 §4.2.2 明示的「侧栏内固定 4」冲突
+      // （实测 300 宽下得 3–5 列不等，格子宽度随之漂移）。
+      //
+      // 侧栏只有 300 宽这一个形态，没有"适配不同宽度"的需求，故直接取常量；
+      // 44px 的行高同样固定（原实现是 `max(34, textScale*14+18)`）。
+      // 注：原先的 `MediaQuery.textScalerOf` 取值随该算术一并删除（已无用处）。
+      final columns = HnBreak.episodeSidebarColumns;
+      final extent = HnBreak.episodeSidebarExtent;
       final target = max(
         0,
         widget.episodes.indexWhere(
@@ -415,6 +425,8 @@ class _EpisodeBrowserState extends State<EpisodeBrowser> {
                   number: episode.number,
                   vip: episode.vip,
                   compact: true,
+                  watched: widget.watchedNumbers?.contains(episode.number) ??
+                      false,
                   current:
                       widget.selectedNumbers?.contains(episode.number) ??
                       episode.number == widget.currentNumber,

@@ -29,6 +29,8 @@ import 'player_controls.dart';
 import 'player_interactions.dart';
 import 'player_menu.dart';
 import 'television_controls.dart';
+import 'ui/layout.dart';
+import 'ui/tokens.dart';
 import 'widgets.dart';
 import 'sources_screen.dart';
 import 'lan_controller.dart';
@@ -1665,9 +1667,41 @@ class _PlayerScreenState extends State<PlayerScreen>
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final desktop = constraints.maxWidth >= 840;
+                        // §4.2.2（B5）：**平板横屏下选集侧栏常驻**。
+                        //
+                        // 改造前这里是 `if (fullscreen) return _videoPane(context)`
+                        // —— 全屏**完全没有侧栏**。而平板横屏观看恰是全屏
+                        // （`_showFullscreen` 在横屏且宽高比 ≥1 时为真，见 1185 行），
+                        // 于是主力形态下永远看不到常驻选集，只能按「选集」弹 Sheet
+                        // —— 正是规范要消除的两次点击（点选集 → 选集数 → 关闭）。
+                        //
+                        // 判定用 HnBreak 的形态（§2.1：只认宽 + 朝向），
+                        // 而非上面的 `desktop`（840 阈值与 §2 的 900 不一致）。
+                        final form = HnBreak.formOf(constraints.biggest);
+                        final sidebar = form == HnForm.tabletLandscape;
+                        if (fullscreen && sidebar) {
+                          // 平板横屏全屏：画面区 Expanded + 选集侧栏常驻。
+                          return Row(
+                            children: [
+                              Expanded(child: _videoPane(context)),
+                              SizedBox(
+                                width: HnBreak.episodeSidebarWidth,
+                                child: _episodePanel(compact: true),
+                              ),
+                            ],
+                          );
+                        }
                         if (fullscreen) {
                           return _videoPane(context);
                         }
+                        // 非全屏的宽布局：保持**既有口径**（desktop 阈值 840 +
+                        // 312/210 两档宽），不属 B5 改动面 —— B5 只负责
+                        // 「平板横屏（含全屏）下常驻侧栏」。
+                        //
+                        // ⚠ 我先前误把这里的 `desktop ? 312` 也改成
+                        // episodeSidebarWidth(300)，使 844×390 这类
+                        // 「宽 ≥840 但未达 §2 平板门槛 900」的横屏窗口也出现 300 宽侧栏，
+                        // 与 §2 形态矩阵（该尺寸属手机横屏）冲突。已还原为 312。
                         if (desktop ||
                             constraints.maxWidth >
                                 constraints.maxHeight * 1.3) {
@@ -2184,14 +2218,45 @@ class _PlayerScreenState extends State<PlayerScreen>
     );
   }
 
-  Widget _episodePanel({bool compact = false}) => ColoredBox(
-    color: Theme.of(context).colorScheme.surface,
-    child: PlayerEpisodeGrid(
+  /// §4.2.2（B5）：播放器选集侧栏。
+  ///
+  /// 平板横屏常驻（宽 [HnBreak.episodeSidebarWidth] = 300、左侧描边），
+  /// 侧栏体内**固定 4 列 × 44px**（由 EpisodeBrowser 的 compact 模式保证）。
+  /// 「已看 ✓」的集号集合在此按 `store.watched(dramaId)` 的进度算出。
+  Widget _episodePanel({bool compact = false}) {
+    final tokens = Theme.of(context).extension<HongguoTokens>();
+    // 已看：当前剧的观看进度所在集及之前所有集。store 只记录"最近看到第几集"，
+    // 没有逐集完成状态，故按「≤ 进度集号」判定 —— 与详情页的选集标记口径一致。
+    final watched = widget.store.watched(widget.detail.drama.id);
+    final watchedNumbers = watched == null
+        ? const <int>{}
+        : {
+            for (final episode in widget.detail.episodes)
+              if (episode.number <= watched.episode) episode.number,
+          };
+    final grid = PlayerEpisodeGrid(
       episodes: widget.detail.episodes,
       currentIndex: _index,
       compact: compact,
       title: compact ? '剧集' : '选集',
+      watchedNumbers: watchedNumbers,
       onSelected: (index) => _play(index),
-    ),
-  );
+    );
+    if (!compact) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: grid,
+      );
+    }
+    // 侧栏形态：token 化的 sidebar 底 + 左侧描边（§4.2.2）。
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tokens?.sidebar ?? Theme.of(context).colorScheme.surface,
+        border: Border(
+          left: BorderSide(color: tokens?.sidebarBorder ?? Colors.transparent),
+        ),
+      ),
+      child: grid,
+    );
+  }
 }
