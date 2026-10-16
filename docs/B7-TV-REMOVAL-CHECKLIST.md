@@ -111,3 +111,40 @@ B7 是"删"，删错了不会红、只会静默失去能力（"只删不搬"的�
 ---
 
 分三批的理由与前面一致：**便于失败归因**。且 B7 是"删"，与前面"增/改"的风险性质不同 —— 删错了不会红，只会静默失去能力（如"只删不搬"那次教训），所以每批都要逐项核对"删除对象是否还有别的使用者"。
+
+---
+
+## 七、附录：`AppLayout.isTelevision` 全量依赖排查（B7c 前置，本轮已补做）
+
+上一轮我说"未全量排查"，现补上。全仓共 **17 处**调用，逐点核对如下。
+
+| 文件:行 | 用法 | 性质 | 删除后的形态 |
+|---|---|---|---|
+| `widgets.dart:366/372` | 字号 `television ? 17 : 14` / `? 14 : 12` | TV 放大字号 | 恒取非 TV 档（14 / 12） |
+| `widgets.dart:381/551` | `television` 局部、`autofocus` | TV 布局 + 遥控自动聚焦 | 删局部；`autofocus` 移除 |
+| `catalog_filters.dart:53` | 行高 `television ? 64 : ...` | TV 行高 | 恒取非 TV 档 |
+| `downloads_screen.dart:143/670` | `autofocus`、TV 表格结构 | 遥控 | 移除 autofocus；删 TV 结构分支 |
+| `detail_screen.dart:260/341` | `autofocus`、TV 布局 | 遥控 | 同上 |
+| `saved_library.dart:233` | `if (isTelevision) { TV 网格 }` | TV 网格 | 删整个分支，保留非 TV 路径 |
+| `player_screen.dart:765` | `_television` 状态同步 | TV 控制层选择 | 删字段与同步逻辑（B7a） |
+| `home_screen.dart:424` | `_televisionSearch()` | TV 搜索对话框 | 删该分支 |
+| `home_screen.dart:1044` | 侧边栏/`_televisionGrid` 选择 | TV 导航 | 删 TV 侧边栏（B7b） |
+| `home_screen.dart:1438` | `_searchVisible && !television` | TV 不显示搜索框 | 退化为 `if (_searchVisible)` |
+| `episode_browser.dart:217/371` | TV 网格与列数 | TV | 删 TV 分支，**保留 compact（B5 侧栏）** |
+
+### ✅ 关键风险已排除
+`DramaTile.extentFor` / `titleHeight` 里也含 `isTelevision` 判断，而 `extentFor`
+**同时被非 TV 路径引用**（`saved_library` 与 `home_screen` 各一处）—— 这本来是
+最可能"删出问题"的点。实测两处调用**都在 `if (AppLayout.isTelevision)` 分支内部**
+（`saved_library.dart:233` 与 `home_screen._televisionGrid`），故删除 TV 分支后
+`extentFor` 只会被非 TV 档调用，**卡高不会变**。
+
+### 结论
+**17 处全部是 TV-UI 专属**（遥控聚焦 / TV 布局 / TV 结构），没有一处承担
+非 TV 也需要的通用行为。因此 `AppLayout.isTelevision` 与 `AppDevice.television`
+**可以整批删除**，无需保留兼容层。删除后各点的形态如表中"删除后的形态"列。
+
+**但删除顺序仍建议分三批**（B7a/b/c），理由不是"怕删错开关"，而是：
+1. 三个批次的**验证方式不同**（B7a 看播放器、B7b 看导航与网格、B7c 看全局形态）
+2. 删 `isTelevision` 会让大量"两分支"塌缩成"一分支"，一次性做会让 diff 过大、
+   失败时无法二分
