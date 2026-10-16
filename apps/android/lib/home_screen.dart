@@ -1122,24 +1122,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? null
                         : _refreshCatalog,
                   ),
-                PopupMenuButton<String>(
-                  tooltip: '更多',
-                  onSelected: (value) {
-                    if (value == 'update') {
-                      _refreshCatalog();
-                    }
-                  },
-                  // B9：本菜单原先还有 站源管理 / 用户管理 / 设置与备份 /
-                  // 界面模式 / 关于 五项 —— 它们都是**设置页已有的重复入口**
-                  // （"同一件事两处"）。现只留下「更新剧库」：
-                  // 它是**内容操作**（拉取发现页数据），不是设置项。
-                  //
-                  // 关于对话框已**先**迁入设置页「关于」组再删旧入口；
-                  // 界面模式随 `displayMode` 整条删除。
-                  itemBuilder: (_) => [
-                    if (_tab == 0 &&
-                        !_showRecommendations &&
-                        constraints.maxWidth < 400)
+                // ⚠ 只在**确实有菜单项**时才渲染（见 `_showsOverflowMenu`）。
+                //
+                // 曾经这里无条件渲染，而它唯一的菜单项带一个 `width < 400`
+                // 条件 —— 于是宽屏（≥400）、以及「我的」等非发现页、推荐视图下
+                // 都会得到一个**空菜单**：点开是空弹窗，看起来就是"按钮点不了"
+                // （用户真机反馈）。
+                //
+                // 修法：把"按钮是否渲染"与"菜单项是否出现"**收敛为同一个条件**，
+                // 从结构上不可能再出现空菜单（而不是在空时塞兜底项 —— 那等于
+                // 把设置入口塞回顶栏，与 B2「设置是导航目的地」的设计冲突）。
+                if (_showsOverflowMenu(constraints.maxWidth))
+                  PopupMenuButton<String>(
+                    tooltip: '更新剧库',
+                    onSelected: (value) {
+                      if (value == 'update') {
+                        _refreshCatalog();
+                      }
+                    },
+                    // B9：本菜单原先还有 站源管理 / 用户管理 / 设置与备份 /
+                    // 界面模式 / 关于 五项 —— 它们都是**设置页已有的重复入口**
+                    // （"同一件事两处"）。现只留下「更新剧库」：
+                    // 它是**内容操作**（拉取发现页数据），不是设置项。
+                    itemBuilder: (_) => [
                       PopupMenuItem(
                         value: 'update',
                         enabled:
@@ -1149,8 +1154,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                         child: const Text('更新剧库'),
                       ),
-                  ],
-                ),
+                    ],
+                  ),
               ],
               const SizedBox(width: 8),
             ],
@@ -1272,6 +1277,20 @@ class _HomeScreenState extends State<HomeScreen> {
       _category.isEmpty &&
       _search.text.trim().isEmpty &&
       _submittedQuery.isEmpty;
+
+  /// 顶栏「更新剧库」**溢出菜单**是否渲染。
+  ///
+  /// 与同一位置的 `catalog-refresh` 刷新按钮**互为补集**，两者都调
+  /// `_refreshCatalog`：
+  /// - 宽屏（`maxWidth >= 400`）：用 `RefreshAction` 按钮，**不渲染**溢出菜单
+  /// - 窄屏（`< 400`）：图标按钮放不下，改用溢出菜单
+  ///
+  /// 因此「更新剧库」在任一宽度下**恰好有一个**入口，既不会重复也不会丢失。
+  ///
+  /// 抽成单一谓词是这次真机 bug 的教训：原先"按钮无条件渲染"与"菜单项带
+  /// 宽度条件"是**两处判断**，条件一分叉就产生了空菜单（用户反馈"点不了"）。
+  bool _showsOverflowMenu(double maxWidth) =>
+      _tab == 0 && !_showRecommendations && maxWidth < 400;
 
   /// 发现页区块头标题（§4.1.1）。
   ///

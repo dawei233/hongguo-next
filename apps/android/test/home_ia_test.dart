@@ -147,4 +147,80 @@ void main() {
     expect(find.text('站源密码锁'), findsOneWidget,
         reason: '连点 6 次应弹出站源密码门（B2 曾漏迁移此接线，B7b 才暴露）');
   });
+
+  _overflowMenuGuards();
+}
+// ───────────────────────────────────────────────────────────────────────────
+// 顶栏「更新剧库」入口的**互斥性**守卫（真机 bug 回归）
+//
+// 用户反馈：「右上角那个（更多/设置类）按钮点不了」。根因是 B9 清理后，
+// `PopupMenuButton` 仍**无条件渲染**，而它唯一的菜单项带着
+// `constraints.maxWidth < 400` 条件 —— 宽屏（≥400）下点开是**空菜单**。
+//
+// 实测范围比反馈更广：`_tab != 0`（「我的」等页）与推荐视图下同样是空菜单，
+// 与宽度无关。
+//
+// 修法是把"按钮渲染"与"菜单项出现"收敛为**同一个谓词** `_showsOverflowMenu`，
+// 与同位置的 `catalog-refresh` 按钮**互为补集**（两者都调 `_refreshCatalog`）。
+// 下面四条锁住这个互补关系：任一宽度下，**恰好一个**入口存在。
+// ───────────────────────────────────────────────────────────────────────────
+void _overflowMenuGuards() {
+  Future<void> pumpHome(WidgetTester tester, Size size) async {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final store = testStore(await SharedPreferences.getInstance());
+    addTearDown(store.dispose);
+    await tester.pumpWidget(
+      DuanjuApp(repository: FixtureRepository(), store: store),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  /// 「更新剧库」溢出菜单：以 tooltip 定位（同位置刷新按钮的 tooltip 相同，
+  /// 故用 PopupMenuButton 类型区分），且**必须非空**才算合格入口。
+  Finder overflowMenu() => find.byType(PopupMenuButton<String>);
+
+  testWidgets('宽屏：不渲染溢出菜单，且刷新按钮存在（二者互补）', (tester) async {
+    await pumpHome(tester, const Size(1200, 800));
+    // 关键断言：宽屏下**不存在** PopupMenuButton —— 从结构上杜绝空菜单。
+    expect(overflowMenu(), findsNothing, reason: '宽屏不该出现溢出菜单（会点成空弹窗）');
+    expect(
+      find.byKey(const ValueKey('catalog-refresh')),
+      findsOneWidget,
+      reason: '宽屏的「更新剧库」入口应由刷新按钮承担',
+    );
+  });
+
+  testWidgets('窄屏：渲染溢出菜单且菜单项非空，刷新按钮不出现', (tester) async {
+    await pumpHome(tester, const Size(390, 844));
+    expect(overflowMenu(), findsOneWidget);
+    expect(find.byKey(const ValueKey('catalog-refresh')), findsNothing);
+    // 点开确认**不是空菜单**：必须能看到「更新剧库」这一项。
+    await tester.tap(overflowMenu());
+    await tester.pumpAndSettle();
+    expect(find.text('更新剧库'), findsOneWidget, reason: '窄屏菜单必须有实际内容');
+  });
+
+  testWidgets('非发现页（我的）：不渲染溢出菜单（原先此处也是空菜单）', (tester) async {
+    await pumpHome(tester, const Size(390, 844));
+    await tester.tap(find.byKey(const ValueKey('bottom-nav-1')));
+    await tester.pumpAndSettle();
+    expect(
+      overflowMenu(),
+      findsNothing,
+      reason: '「我的」页没有可放的内容项，不该渲染空菜单（与宽度无关）',
+    );
+  });
+
+  testWidgets('宽屏下设置入口可达（左轨第 5 项）', (tester) async {
+    // 用户说"右上角那个设置按钮点击不了" —— 实为上述空菜单。
+    // 本条确认真正的设置入口（左轨）在宽屏下可用。
+    await pumpHome(tester, const Size(1200, 800));
+    await tester.tap(find.byKey(const ValueKey('rail-4')));
+    await tester.pumpAndSettle();
+    expect(find.text('设置与备份'), findsOneWidget);
+  });
 }
