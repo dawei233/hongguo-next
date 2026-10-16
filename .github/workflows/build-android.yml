@@ -236,6 +236,38 @@ jobs:
           fi
         working-directory: apps/android
 
+      # ②b 分析器覆盖 integration_test（显式，不依赖 flutter analyze 的隐式范围）
+      #
+      # 背景：`flutter test` **只扫 test/**，不含 integration_test/。
+      # B7a 删除 `AppBottomNavigation` 时，`flutter test` 全绿，但
+      # `integration_test/appearance_test.dart:78` 仍在引用它 —— 该编译错误
+      # 不会被测试拦住。虽然 `flutter analyze` 很可能覆盖 integration_test
+      # （CI 门禁含 error 计数，理论上会红），但"是否覆盖"依赖隐式行为。
+      # 这里显式跑一次，使覆盖**确定且可核对**。
+      #
+      # 注意：integration_test 的基线是 **0 issue**，不与 test/ 的 106 冻结基线
+      # 挂钩 —— 两套基线不可混算。
+      #
+      # 不跑 `flutter test integration_test/`：那是 on-device 测试，
+      # 需要设备/模拟器，CI 里跑不了（搭 emulator 成本远超收益）。
+      - name: ②b dart analyze integration_test（显式覆盖，基线 0）
+        run: |
+          dart analyze integration_test/ > integration_analyze.log 2>&1 || true
+          # 防假绿：崩溃时日志无结论行，必须先断言产出了结论。
+          if ! grep -qE 'issues found|No issues found' integration_analyze.log; then
+            echo "---- dart analyze integration_test 未产出结论（崩溃/中断），按失败处理 ----"
+            cat integration_analyze.log
+            exit 1
+          fi
+          echo "---- dart analyze integration_test 输出 ----"
+          cat integration_analyze.log
+          # 与 test/ 的冻结基线不同：integration_test 基线为 0 error。
+          if grep -qE '^[[:space:]]*error' integration_analyze.log; then
+            echo "::error::integration_test 存在 error 级问题（基线为 0）"
+            exit 1
+          fi
+        working-directory: apps/android
+
       # test 对照冻结失败基线：上游本身有失败用例
       # （docs/ARCHITECTURE.md §7 M4：“上游本身有 7 个失败用例，全绿不是可达标准”）。
       # 纯跑 flutter test 恒 exit 1 —— 失败数超过冻结基线 7 才是回归，必须红。
