@@ -330,15 +330,24 @@ jobs:
           test -s "$APK" || { echo "::error::APK 不存在：$APK"; exit 1; }
           unzip -l "$APK" | grep -q "lib/arm64-v8a/libhncore_android.so" \
             || { echo "::error::APK 缺 lib/arm64-v8a/libhncore_android.so —— FFI 内核没有进包"; exit 1; }
-          # ABI 一致性：**每个声明了 libflutter.so 的 ABI，都必须同时有
-          # libhncore_android.so**。否则那些设备装上后会 dlopen 失败（崩），
-          # 而只断言"arm64 那份存在"的做法**抓不到**这种半残包 ——
-          # 2026-10-16 实测 preview 包就是这样溜过 CI 的（v7a/x86_64 缺内核）。
-          for abi_dir in $(unzip -l "$APK" | awk '/lib\/.*\/libflutter.so$/ {sub(/.*lib\//,""); sub(/\/libflutter.so.*/,""); print}' | sort -u); do
+          # ABI 一致性：**APK 只应包含内核真正支持的那个 ABI**。
+          #
+          # ⚠ 这条断言的第一版以 `libflutter.so` 为判据（"有 flutter 的 ABI 就
+          # 必须有内核"），结果**自己漏掉了真问题**：限定 `--target-platform`
+          # 后 v7a/x86_64 里仍留着 22/14 个插件原生库（media_kit/mpv、ffmpeg），
+          # 只是没有 libflutter.so —— 断言照样绿，而 Android 会按"该 ABI 目录下
+          # 有原生库"把 32 位设备判成 v7a 并选中，启动时加载失败（能装上、开就崩）。
+          #
+          # 判据改为"**该 ABI 目录下存在任何 .so 即算声明了该 ABI**"并要求它
+          # 必须有内核 —— 与 Android 的 primaryCpuAbi 选择逻辑对齐。
+          # 配合 build.gradle.kts 的 abiFilters，多余目录会被真正剔掉。
+          ABI_DIRS=$(unzip -l "$APK" | awk '/lib\/[^/]+\/[^/]+\.so$/ {sub(/.*lib\//,""); sub(/\/.*/,""); print}' | sort -u)
+          echo ">> APK 内声明的 ABI：$ABI_DIRS"
+          for abi_dir in $ABI_DIRS; do
             unzip -l "$APK" | grep -q "lib/$abi_dir/libhncore_android.so" \
-              || { echo "::error::ABI $abi_dir 有 libflutter.so 却缺 libhncore_android.so —— 该架构设备装上会崩"; exit 1; }
+              || { echo "::error::ABI $abi_dir 内存在原生库却缺 libhncore_android.so —— 该架构设备装上会崩"; exit 1; }
           done
-          echo ">> ABI 一致性检查通过"
+          echo ">> ABI 一致性检查通过（每个含原生库的 ABI 都有内核）"
           BT="$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs "$APK" \
             || { echo "::error::apksigner verify 失败"; exit 1; }

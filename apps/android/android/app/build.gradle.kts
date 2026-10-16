@@ -33,6 +33,21 @@ android {
     defaultConfig {
         applicationId = "com.duanju.duanju_app"
         minSdk = 26
+        // ⚠ 只打包 arm64-v8a —— 与内核 .so 的 ABI 对齐。
+        //
+        // 为什么必须在 Gradle 侧限制：`flutter build apk --target-platform
+        // android-arm64` 只管 Flutter 引擎那一份，**插件 AAR 里的原生库
+        // （media_kit/mpv、ffmpeg_kit 等）仍会把 arm64-v8a + armeabi-v7a +
+        // x86_64 全打进 APK**。实测 2026-10-16：限定 target-platform 后
+        // v7a/x86_64 目录里仍有 22/14 个 .so，**只是没有 libflutter.so 与
+        // libhncore_android.so**。
+        //
+        // 危害：Android 按"该 ABI 目录下是否有原生库"决定 primaryCpuAbi ——
+        // 32 位设备会选中 armeabi-v7a，然后加载 libflutter.so/内核时失败。
+        // 即"能装上、一打开就崩"。abiFilters 才能真正把这些目录剔掉。
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
