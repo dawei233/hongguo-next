@@ -126,18 +126,54 @@ void main() {
       }
     }
 
+    /// B2（§4.1.1）：VIP 显隐从首屏常驻按钮**移入筛选 Sheet**（`⇅`）。
+    /// 本用例考的「只有黄豆暴露 VIP 过滤、且设置能持久生效」不变，
+    /// 只是把"点首屏图标"换成"在 Sheet 里选目标态 + 应用"。
+    Future<void> openFilters() async {
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Tooltip &&
+              (widget.message ?? '').startsWith('排序与筛选'),
+        ).first,
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// 该站源是否在 Sheet 里提供了 VIP 项（= 暴露 VIP 过滤）。
+    Future<bool> sheetHasVipFilter() async {
+      await openFilters();
+      final has = find.textContaining('VIP：').evaluate().isNotEmpty;
+      // 不开任何项，直接关掉 Sheet（点遮罩）。
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      return has;
+    }
+
+    /// 在 Sheet 里把 VIP 设为「显示」或「隐藏」并应用。
+    Future<void> setVip(String label) async {
+      await openFilters();
+      await tester.tap(find.text(label));
+      await tester.pump();
+      await tester.tap(find.text('应用'));
+      await tester.pumpAndSettle();
+    }
+
     for (final group in SourceGroup.fromSources(SourceSite.values)) {
       await select(group.name);
       if (group.id == 'huangdou') {
         expect(find.text('会员合成剧'), findsNothing);
-        await tester.tap(find.byTooltip('VIP：隐藏'));
-        await tester.pumpAndSettle();
-        // 隐藏 VIP 后该卡重新出现（可能在首屏，也可能需下滚）。
+        expect(await sheetHasVipFilter(), isTrue, reason: '黄豆应暴露 VIP 过滤');
+        await setVip('VIP：显示');
+        // 显示 VIP 后该卡出现（可能在首屏，也可能需下滚）。
         await revealVipCard();
         expect(find.text('会员合成剧'), findsOneWidget);
       } else {
-        expect(find.byTooltip('VIP：隐藏'), findsNothing);
-        expect(find.byTooltip('VIP：显示'), findsNothing);
+        expect(
+          await sheetHasVipFilter(),
+          isFalse,
+          reason: '非黄豆站源不应暴露 VIP 过滤',
+        );
         await revealVipCard();
         expect(find.text('会员合成剧'), findsWidgets);
       }
@@ -146,9 +182,8 @@ void main() {
     // 原「单源版提前 return」分支删除；黄豆需先解锁密码锁才能到达，
     // 上面的 enableSourceGate 已覆盖。
     await select('黄豆');
-    expect(find.byTooltip('VIP：显示'), findsOneWidget);
-    await tester.tap(find.byTooltip('VIP：显示'));
-    await tester.pumpAndSettle();
+    // 回到黄豆并设成「隐藏」→ store 持久化。
+    await setVip('VIP：隐藏');
     expect(store.hideVip, isTrue);
     await select('红果');
     expect(find.text('会员合成剧'), findsOneWidget);

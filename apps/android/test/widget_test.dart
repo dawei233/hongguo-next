@@ -58,13 +58,47 @@ void main() {
       await tester.tap(find.text('黄豆'));
       await tester.pumpAndSettle();
       expect(find.text('会员测试剧'), findsNothing);
-      expect(find.byTooltip('VIP：隐藏'), findsOneWidget);
-      await tester.tap(find.byTooltip('VIP：隐藏'));
-      await tester.pumpAndSettle();
-      expect(find.byTooltip('VIP：显示'), findsOneWidget);
+      // B2（§4.1.1）：VIP 显隐从首屏的常驻 IconButton **移入筛选 Sheet**
+      // （`⇅` 入口）。本用例考的是"VIP 过滤生效"，与入口位置无关，
+      // 故先打开 Sheet 再点对应项 —— 用户控制本身没有被删除，只是换了位置。
+      Future<void> tapVipFilter(String tooltip) async {
+        await tester.tap(
+          find.byTooltip(
+            '排序与筛选 · ${local.catalogView.sort.label}',
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(tooltip));
+        await tester.pumpAndSettle();
+        // Sheet 里选完要按「应用」才回传。
+        await tester.tap(find.text('应用'));
+        await tester.pumpAndSettle();
+      }
+
+      // 目标卡可能在首屏之下（B2 首屏加了区块头，内容整体下移），
+      // 故先滚入视野再断言 —— 本用例考的是"VIP 过滤是否生效"，
+      // 不是"卡片是否恰好落在首屏"。
+      Future<void> revealVipDrama() async {
+        for (var i = 0; i < 6; i++) {
+          if (find.text('会员测试剧').evaluate().isNotEmpty) return;
+          await tester.drag(
+            find.byType(CustomScrollView).first,
+            const Offset(0, -300),
+          );
+          await tester.pumpAndSettle();
+        }
+      }
+
+      // 注意语义：Sheet 里的 VIP 项是**状态单选**（`VIP：隐藏` = "VIP 内容
+      // 处于隐藏态"），不是"点它去隐藏"。默认 hideVip=true，所以要让
+      // 会员剧出现，应选「VIP：显示」；再选回「VIP：隐藏」它才消失。
+      // 这与原首屏按钮的 tooltip 语义（tooltip 命名当前态）一致，
+      // 只是从"点当前态翻转"换成"直接选目标态"——单选组更直白。
+      await tapVipFilter('VIP：显示');
+      await revealVipDrama();
       expect(find.text('会员测试剧'), findsOneWidget);
-      await tester.tap(find.byTooltip('VIP：显示'));
-      await tester.pumpAndSettle();
+      await tapVipFilter('VIP：隐藏');
+      await revealVipDrama();
       expect(find.text('会员测试剧'), findsNothing);
       await tester.tap(find.text('测试短剧'));
       await tester.pumpAndSettle();

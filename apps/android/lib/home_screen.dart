@@ -735,14 +735,35 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// §4.1.1（B2）：筛选入口。分类选择与排序/筛选合并到一个 Sheet ——
+  /// 首屏因此不再常驻 chip 行，让位给内容流。
   Future<void> _chooseCatalogView() async {
-    final selected = await chooseCatalogView(context, widget.store.catalogView);
-    if (selected != null && mounted) {
+    final result = await chooseCatalogView(
+      context,
+      widget.store.catalogView,
+      categories: _displayCategories,
+      category: _displayCategory,
+      // 仅当该站源支持 VIP 过滤时提供此项（否则 Sheet 不显示这一行）。
+      hideVip: _supportsVipFilter ? widget.store.hideVip : null,
+    );
+    if (result == null || !mounted) return;
+    await saveUserChange(
+      context,
+      () => widget.store.setCatalogView(result.view),
+    );
+    if (!mounted) return;
+    if (result.hideVip != null && result.hideVip != widget.store.hideVip) {
       await saveUserChange(
         context,
-        () => widget.store.setCatalogView(selected),
+        () => widget.store.setHideVip(result.hideVip!),
       );
-      if (mounted && _scroll.hasClients) _scroll.jumpTo(0);
+      if (!mounted) return;
+    }
+    // 分类变了才切（避免无谓重载）。
+    if (result.category != _displayCategory) {
+      _changeCategory(result.category);
+    } else if (_scroll.hasClients) {
+      _scroll.jumpTo(0);
     }
   }
 
@@ -1416,28 +1437,34 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-        CatalogFilters(
-          key: ValueKey('filters-${_group.id}'),
-          categories: _displayCategories,
-          category: _displayCategory,
-          error: _categoriesError,
-          onCategory: _changeCategory,
-          onRetry: () => _loadCategories(force: true),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_supportsVipFilter)
-                IconButton(
-                  tooltip: widget.store.hideVip ? 'VIP：隐藏' : 'VIP：显示',
-                  onPressed: () => saveUserChange(
-                    context,
-                    () => widget.store.setHideVip(!widget.store.hideVip),
+        // §4.1.1（B2）：非 TV 首屏**不再常驻分类 chip 行** —— 分类选择已并入
+        // 右上 `⇅` 的筛选 Sheet（`_chooseCatalogView`），首屏让位给内容流。
+        //
+        // TV 保留常驻 chip 行：TV 是遥控交互，chip 行是可聚焦的目标，
+        // 收进 Sheet 反而增加遥控步数；且 TV 不在本次范围。
+        if (television)
+          CatalogFilters(
+            key: ValueKey('filters-${_group.id}'),
+            categories: _displayCategories,
+            category: _displayCategory,
+            error: _categoriesError,
+            onCategory: _changeCategory,
+            onRetry: () => _loadCategories(force: true),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_supportsVipFilter)
+                  IconButton(
+                    tooltip: widget.store.hideVip ? 'VIP：隐藏' : 'VIP：显示',
+                    onPressed: () => saveUserChange(
+                      context,
+                      () => widget.store.setHideVip(!widget.store.hideVip),
+                    ),
+                    icon: VipIcon(hidden: widget.store.hideVip),
                   ),
-                  icon: VipIcon(hidden: widget.store.hideVip),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
         if (_showRecommendations)
           Expanded(
             child: GestureDetector(

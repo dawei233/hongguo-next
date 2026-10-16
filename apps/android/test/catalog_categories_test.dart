@@ -185,15 +185,50 @@ void main() {
         repository.categoryRequests.toSet(),
         containsAll(['huangguo-video||1', 'huangguoai||1', 'cloudfront||1']),
       );
-      expect(find.text('AI成人短剧'), findsNothing);
-      expect(find.text('AI 短剧'), findsOneWidget);
+      // B2（§4.1.1）：分类选择从首屏常驻 chip 行**移入筛选 Sheet**（`⇅` 入口）。
+      // 本用例考的是"黄果多 facet 的分类合并与陈旧响应丢弃"，与入口位置无关，
+      // 故改为通过 Sheet 切换分类 —— 分类能力本身没有被删除。
+
+      /// 打开筛选 Sheet（tooltip 以「排序与筛选」开头，后半随当前排序变化，
+      /// 故用 contains 而不是精确匹配）。
+      Future<void> openFilters() async {
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Tooltip &&
+                (widget.message ?? '').startsWith('排序与筛选'),
+          ).first,
+        );
+        // 用 pump 而非 pumpAndSettle：本用例会往 repository 里塞一个
+        // 永不完成的 `pendingComic`（用于验证陈旧响应被丢弃），
+        // 有未决请求时 pumpAndSettle 必然超时。Sheet 的入场动画
+        // 用固定时长推进即可。
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
       Future<void> choose(String name) async {
+        // 分类 chip 在 Sheet 里；若当前没开 Sheet，先打开。
+        if (find.widgetWithText(ChoiceChip, name).evaluate().isEmpty) {
+          await openFilters();
+        }
         final chip = find.widgetWithText(ChoiceChip, name);
         await tester.ensureVisible(chip);
         await tester.tap(chip);
         await tester.pump();
+        // Sheet 是"先选后确认"：分类在按「应用」后才回传。
+        await tester.tap(find.text('应用'));
+        await tester.pump();
         await tester.pump(const Duration(milliseconds: 250));
       }
+
+      // 分类在 Sheet 内可见（先在 Sheet 里核验，再走切换流程）。
+      await openFilters();
+      expect(find.text('AI成人短剧'), findsNothing);
+      expect(find.text('AI 短剧'), findsOneWidget);
+      await tester.tap(find.text('应用'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       final pending = Completer<CatalogPage>();
       repository.pendingComic = pending;
