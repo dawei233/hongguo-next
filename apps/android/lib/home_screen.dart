@@ -21,7 +21,9 @@ import 'lan_screen.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
 import 'ui/components/hn_navigation_rail.dart';
+import 'ui/components/hn_segmented_tabs.dart';
 import 'ui/layout.dart';
+import 'ui/tokens.dart';
 import 'widgets.dart';
 import 'vip_icon.dart';
 import 'settings_screen.dart';
@@ -70,6 +72,17 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   int _generation = 0;
   int _tab = 0;
+
+  /// §3.2（B2）：「我的」页内的分段选择（0 追剧 / 1 最近 / 2 下载）。
+  ///
+  /// 上游把「追剧 / 最近观看 / 下载」做成三个平级 tab（各自维护列表、空态、
+  /// 批量选择），规范把它们合并为一个「我的」目的地 + 三个同级分段。
+  ///
+  /// **本批不删 `_tab`**：TV 侧边栏（164px，遥控）仍按 `_tab` 索引渲染，
+  /// 而 TV 已明确不在范围（用户：主要给平板/手机/PC），16 个 TV 用例还压着。
+  /// 故做法是「非 TV 走新 IA，TV 保持原样」——两套并存但互不干扰，
+  /// TV 下线（B7）时再删 `_tab`。这比顺手统一更安全。
+  int _mySection = 0;
   String _submittedQuery = '';
   final _categorySelections = <String, String>{};
   late final CatalogBrowser _browser;
@@ -129,6 +142,32 @@ class _HomeScreenState extends State<HomeScreen> {
   /// 注：tab 语义（0 发现 / 1 追剧 / 2 最近观看 / 3 下载）本批**不动** ——
   /// 规范 §3.2 的「合并为我的 + 三分段」是 B2 的范围，那会改 tab index
   /// 并牵动一批测试断言，需单独一批做。
+  /// 底栏（手机竖屏）：**3 个目的地** —— 发现 / 我的 / 设置（§3.2）。
+  ///
+  /// 上游的「追剧 / 最近观看 / 下载」三个平级 tab 被收进「我的」的三分段，
+  /// 所以底栏从 4 项降到 3 项。
+  List<HnRailDestination> get _bottomDestinations => const [
+    HnRailDestination(
+      icon: Icons.explore_outlined,
+      selectedIcon: Icons.explore,
+      label: '发现',
+    ),
+    HnRailDestination(
+      icon: Icons.bookmark_border_rounded,
+      selectedIcon: Icons.bookmark_rounded,
+      label: '我的',
+    ),
+    HnRailDestination(
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+      label: '设置',
+    ),
+  ];
+
+  /// 左轨（手机横屏 72 / 平板横屏 88）：**5 项** —— 发现 / 追剧 / 最近 /
+  /// 下载 / 设置（§3.2）。中间三项**直入「我的」对应分段**，比"先进我的再切
+  /// 分段"少一次点击；横屏面积够放 5 项，竖屏底栏放 5 项会挤到标签读不出
+  /// （§3.2 的取舍说明即此）。
   List<HnRailDestination> get _railDestinations => [
     const HnRailDestination(
       icon: Icons.explore_outlined,
@@ -143,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const HnRailDestination(
       icon: Icons.history_rounded,
       selectedIcon: Icons.history_rounded,
-      label: '最近观看',
+      label: '最近',
     ),
     if (widget.store.canDownload)
       const HnRailDestination(
@@ -151,7 +190,23 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedIcon: Icons.download_rounded,
         label: '下载',
       ),
+    const HnRailDestination(
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+      label: '设置',
+    ),
   ];
+
+  /// 底栏当前项（3 目的地）：发现=0；「我的」=1（`_tab` 1..3 都属我的）；
+  /// 「设置」是 push 路由、不作为 tab 停留，故永不选中（返回 -1）。
+  int get _bottomSelectedIndex => switch (_tab) {
+    0 => 0,
+    _ => 1,
+  };
+
+  /// 左轨当前项（5 项）：发现=0；追剧/最近/下载 = 1..3（由 `_mySection` 定）；
+  /// 设置同上是 push，返回 -1。
+  int get _railSelectedIndex => _tab == 0 ? 0 : 1 + _mySection;
   String get _displayCategory =>
       _showRecommendations ? _recommendationCategory : _category;
   List<CatalogCategory> get _displayCategories => [
@@ -740,6 +795,61 @@ class _HomeScreenState extends State<HomeScreen> {
     _changeTab(tab);
   }
 
+  /// §3.2（B2）：非 TV 的目的地选择。
+  ///
+  /// 新 IA 是 3 个目的地（发现 / 我的 / 设置），但**内容派发仍由 `_tab` 决定**
+  /// ——「我的」里的三个分段通过 `_mySection` 映射回 `_tab`（1 追剧 / 2 最近 /
+  /// 3 下载）。这样做的理由：内容派发、AppBar 标题、PopScope、选集模式等
+  /// 六处逻辑全部复用原 `_tab` 语义，改动面收敛在"导航 UI"这一层，
+  /// 不牵动内容层 —— 与 §6.2 的"最小改动"一致。
+  ///
+  /// **TV 不走这里**：TV 侧边栏直接调 `_onNavSelected(_tab)`（保持原样）。
+  void _onDestinationSelected(int index) {
+    switch (index) {
+      case 0:
+        _changeTab(0);
+      case 1:
+        // 进入「我的」，停在上次选的分段。
+        _changeTab(1 + _mySection);
+      case 2:
+        _openSettings();
+    }
+  }
+
+  /// §3.2：左轨 5 项（发现 / 追剧 / 最近 / 下载 / 设置）—— 中间三项直入分段，
+  /// 少一次点击（横屏面积够，见 §3.2 的取舍说明）。
+  void _onRailSelected(int index) {
+    switch (index) {
+      case 0:
+        _changeTab(0);
+      case 1:
+        _selectMySection(0);
+      case 2:
+        _selectMySection(1);
+      case 3:
+        _selectMySection(2);
+      case 4:
+        _openSettings();
+    }
+  }
+
+  void _selectMySection(int section) => setState(() {
+    _mySection = section;
+    _tab = 1 + section;
+    _selectionMode = false;
+    _selectedDramas.clear();
+  });
+
+  void _openSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            SettingsScreen(repository: widget.repository, store: widget.store),
+      ),
+    );
+  }
+
   void _openSourceGate() {
     _pauseCatalog();
     unawaited(showSourceGateDialog(context, widget.store));
@@ -1125,40 +1235,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         ? HnRailVariant.narrow
                         : HnRailVariant.wide,
                     keyPrefix: 'rail',
-                    selectedIndex: _tab,
-                    onSelected: _onNavSelected,
+                    selectedIndex: _railSelectedIndex,
+                    onSelected: _onRailSelected,
                     destinations: _railDestinations,
                   ),
                 ],
-                Expanded(
-                  child: _tab == 0
-                      ? widget.store.sources.isEmpty
-                            ? const StatusPanel(
-                                title: '暂无可用站源',
-                                message: '请联系管理员为当前用户开放站源。',
-                              )
-                            : _catalog(selectionInBody: desktop || television)
-                      : _tab == 3
-                      ? DownloadsScreen(
-                          repository: widget.repository,
-                          store: widget.store,
-                          embedded: true,
-                        )
-                      : SavedLibrary(
-                          key: ValueKey('saved-tab-$_tab'),
-                          repository: widget.repository,
-                          store: widget.store,
-                          history: _tab == 2,
-                          onOpen: _openDrama,
-                          onContinue: (drama) =>
-                              _openDrama(drama, resume: true),
-                          onDownload:
-                              widget.repository.supportsDownloads &&
-                                  widget.store.canDownload
-                              ? (drama) => _openDrama(drama, download: true)
-                              : null,
-                        ),
-                ),
+                Expanded(child: _content(desktop: desktop, television: television)),
               ],
             ),
           ),
@@ -1172,9 +1254,9 @@ class _HomeScreenState extends State<HomeScreen> {
               : HnNavigationRail(
                   variant: HnRailVariant.bottom,
                   keyPrefix: 'bottom-nav',
-                  selectedIndex: _tab,
-                  onSelected: _onNavSelected,
-                  destinations: _railDestinations,
+                  selectedIndex: _bottomSelectedIndex,
+                  onSelected: _onDestinationSelected,
+                  destinations: _bottomDestinations,
                 ),
         );
         if (!television && !_selectionMode) return scaffold;
@@ -1198,6 +1280,63 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     ),
   );
+
+  /// 内容区（§3.2 的新 IA）。
+  ///
+  /// 非 TV 时，「我的」页顶部有一条三分段（追剧 / 最近 / 下载）——
+  /// 上游把这三者做成三个平级 tab，现在收进一个目的地 + 分段。
+  /// **TV 不套分段**：TV 侧边栏仍直接列 4 项（`_tab` 语义），
+  /// 保持原样以免动到 16 个 TV 用例。
+  Widget _content({required bool desktop, required bool television}) {
+    final body = switch (_tab) {
+      0 => widget.store.sources.isEmpty
+          ? const StatusPanel(
+              title: '暂无可用站源',
+              message: '请联系管理员为当前用户开放站源。',
+            )
+          : _catalog(selectionInBody: desktop || television),
+      3 => DownloadsScreen(
+        repository: widget.repository,
+        store: widget.store,
+        embedded: true,
+      ),
+      _ => SavedLibrary(
+        key: ValueKey('saved-tab-$_tab'),
+        repository: widget.repository,
+        store: widget.store,
+        history: _tab == 2,
+        onOpen: _openDrama,
+        onContinue: (drama) => _openDrama(drama, resume: true),
+        onDownload: widget.repository.supportsDownloads && widget.store.canDownload
+            ? (drama) => _openDrama(drama, download: true)
+            : null,
+      ),
+    };
+    if (television || _tab == 0 || _selectionMode) return body;
+    // 「我的」页：顶部分段（§5.1 第 2 条）+ 下方对应列表。
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            HnSpacing.step5,
+            HnSpacing.step3,
+            HnSpacing.step5,
+            HnSpacing.step2,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: HnSegmentedTabs(
+              labels: const ['追剧', '最近', '下载'],
+              selectedIndex: _mySection,
+              onSelected: _selectMySection,
+              keyPrefix: 'my-seg',
+            ),
+          ),
+        ),
+        Expanded(child: body),
+      ],
+    );
+  }
 
   Widget _catalog({required bool selectionInBody}) {
     final items = _visible;

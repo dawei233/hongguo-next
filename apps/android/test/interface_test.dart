@@ -176,20 +176,45 @@ void main() {
       );
       await tester.pumpAndSettle();
       Size? catalogSize;
-      for (var tab = 0; tab < 3; tab++) {
-        if (tab > 0) {
-          final destination = layout.$3
-              ? find.byKey(ValueKey('tv-nav-$tab'))
-              : layout.$1.width < 840
-              // B3（§5.2）：底部导航与左轨都换成 `HnNavigationRail`
-              // （bottom / wide / narrow 变体），键前缀统一为
-              // `bottom-nav-N`（底栏）与 `rail-N`（左轨）。
-              // 原来宽屏走 Material `NavigationRail`，现已不存在。
-              ? find.byKey(ValueKey('bottom-nav-$tab'))
-              : find.byKey(ValueKey('rail-$tab'));
-          await tester.tap(destination);
+      // B2（IA 重排）：导航路径从「3 个平级 tab」变成两层 ——
+      // - 竖屏：底栏 3 目的地（发现 / 我的 / 设置），后两个页面在「我的」的
+      //   三分段（`my-seg-N`：追剧 / 最近 / 下载）里
+      // - 横屏：左轨 5 项（发现 / 追剧 / 最近 / 下载 / 设置），中间三项直入分段
+      // - TV：侧边栏 4 项（`tv-nav-N`）**未改**（TV 不在范围）
+      //
+      // 本用例要比较的是「同一张海报在 catalog 与两个 saved 页上的尺寸是否一致」，
+      // 与走哪条导航路径无关，故把路径改写成显式步骤，断言部分原样保留。
+      final tv = layout.$3;
+      final narrow = layout.$1.width < 840;
+      final steps = <Future<void> Function()>[
+        () async {}, // 步骤 0：起步就在「发现」页
+        () async {
+          // 到「追剧」（saved，非 history）
+          if (tv) {
+            await tester.tap(find.byKey(const ValueKey('tv-nav-1')));
+          } else if (narrow) {
+            await tester.tap(find.byKey(const ValueKey('bottom-nav-1')));
+            await tester.pumpAndSettle();
+            await tester.tap(find.byKey(const ValueKey('my-seg-0')));
+          } else {
+            await tester.tap(find.byKey(const ValueKey('rail-1')));
+          }
           await tester.pumpAndSettle();
-        }
+        },
+        () async {
+          // 到「最近观看」（saved，history）
+          if (tv) {
+            await tester.tap(find.byKey(const ValueKey('tv-nav-2')));
+          } else if (narrow) {
+            await tester.tap(find.byKey(const ValueKey('my-seg-1')));
+          } else {
+            await tester.tap(find.byKey(const ValueKey('rail-2')));
+          }
+          await tester.pumpAndSettle();
+        },
+      ];
+      for (final step in steps) {
+        await step();
         final covers = find.byType(DramaCover);
         final tiles = find.byType(DramaTile);
         // 断言「所有渲染出的海报尺寸一致、比例 2:3」。

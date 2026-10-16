@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hongguo_next/app_theme.dart';
 import 'package:hongguo_next/ui/components/hn_segmented_tabs.dart';
-import 'package:hongguo_next/ui/tokens.dart';
 
 /// `ANDROID-UI-REDESIGN.md` §5.1 第 2 条的回归测试。
 ///
