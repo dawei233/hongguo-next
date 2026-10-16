@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:hongguo_next/app_bottom_navigation.dart';
+import 'package:hongguo_next/ui/components/hn_navigation_rail.dart';
 import 'package:hongguo_next/app_theme.dart';
 import 'package:hongguo_next/core_bridge.dart';
 import 'package:hongguo_next/home_screen.dart';
@@ -143,9 +143,12 @@ void main() {
     await tester.pumpAndSettle();
     // 标题实际渲染为「我的追剧 · N」，用精确匹配永远命中不到。
     expect(find.textContaining('我的追剧'), findsOneWidget);
+    // B3（§5.2）：`AppBottomNavigation` 已被 `HnNavigationRail` 的 bottom 变体
+    // 取代（保留形态、不保留实现），故断言改到新组件上。语义不变：
+    // 「从设置页返回后仍停在追剧 tab」。
     expect(
       tester
-          .widget<AppBottomNavigation>(find.byType(AppBottomNavigation))
+          .widget<HnNavigationRail>(find.byType(HnNavigationRail))
           .selectedIndex,
       1,
     );
@@ -187,26 +190,34 @@ void main() {
                   context,
                 ).copyWith(textScaler: TextScaler.linear(2)),
                 child: Scaffold(
-                  bottomNavigationBar: AppBottomNavigation(
+                  // B3（§5.2）：改用 HnNavigationRail 的 bottom 变体。
+                  // 本用例考的是「文字放大 2 倍时底部导航的触控目标仍 ≥48」
+                  // 与键盘可达性，与组件归属无关，故只换类型、断言原样保留。
+                  bottomNavigationBar: HnNavigationRail(
+                    variant: HnRailVariant.bottom,
+                    keyPrefix: 'bottom-nav',
                     selectedIndex: selected,
-                    onDestinationSelected: (value) =>
-                        setState(() => selected = value),
+                    onSelected: (value) => setState(() => selected = value),
                     destinations: [
-                      const NavigationDestination(
-                        icon: Icon(Icons.explore_outlined),
+                      const HnRailDestination(
+                        icon: Icons.explore_outlined,
+                        selectedIcon: Icons.explore,
                         label: '发现',
                       ),
-                      const NavigationDestination(
-                        icon: Icon(Icons.bookmark_border),
+                      const HnRailDestination(
+                        icon: Icons.bookmark_border,
+                        selectedIcon: Icons.bookmark,
                         label: '追剧',
                       ),
-                      const NavigationDestination(
-                        icon: Icon(Icons.history),
+                      const HnRailDestination(
+                        icon: Icons.history,
+                        selectedIcon: Icons.history,
                         label: '最近观看',
                       ),
                       if (count == 4)
-                        const NavigationDestination(
-                          icon: Icon(Icons.download_outlined),
+                        const HnRailDestination(
+                          icon: Icons.download_outlined,
+                          selectedIcon: Icons.download,
                           label: '下载',
                         ),
                     ],

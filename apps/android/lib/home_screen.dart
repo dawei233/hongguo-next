@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'app_layout.dart';
-import 'app_bottom_navigation.dart';
 import 'app_build.dart';
 import 'core_bridge.dart';
 import 'catalog_filters.dart';
@@ -21,6 +20,7 @@ import 'local_store.dart';
 import 'lan_screen.dart';
 import 'models.dart';
 import 'remote_widgets.dart';
+import 'ui/components/hn_navigation_rail.dart';
 import 'ui/layout.dart';
 import 'widgets.dart';
 import 'vip_icon.dart';
@@ -119,6 +119,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String get _category => _categorySelections[_group.id] ?? '';
   List<CatalogCategory> get _categories => _browser.categories(_group);
+
+  /// 导航项定义（**单一定义点**，§5.1 第 1 条）。
+  ///
+  /// 改造前底栏与左轨各自写一遍同样四项（`NavigationDestination` 与
+  /// `NavigationRailDestination` 两种对象），改一处标签要改两个地方。
+  /// 现在两处都消费这个列表，由 `HnNavigationRail` 按变体自行渲染。
+  ///
+  /// 注：tab 语义（0 发现 / 1 追剧 / 2 最近观看 / 3 下载）本批**不动** ——
+  /// 规范 §3.2 的「合并为我的 + 三分段」是 B2 的范围，那会改 tab index
+  /// 并牵动一批测试断言，需单独一批做。
+  List<HnRailDestination> get _railDestinations => [
+    const HnRailDestination(
+      icon: Icons.explore_outlined,
+      selectedIcon: Icons.explore,
+      label: '发现',
+    ),
+    const HnRailDestination(
+      icon: Icons.bookmark_border_rounded,
+      selectedIcon: Icons.bookmark_rounded,
+      label: '追剧',
+    ),
+    const HnRailDestination(
+      icon: Icons.history_rounded,
+      selectedIcon: Icons.history_rounded,
+      label: '最近观看',
+    ),
+    if (widget.store.canDownload)
+      const HnRailDestination(
+        icon: Icons.download_outlined,
+        selectedIcon: Icons.download_rounded,
+        label: '下载',
+      ),
+  ];
   String get _displayCategory =>
       _showRecommendations ? _recommendationCategory : _category;
   List<CatalogCategory> get _displayCategories => [
@@ -836,6 +869,11 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, constraints) {
         final television = AppLayout.isTelevision(context);
         final desktop = constraints.maxWidth >= 840;
+        // §2.1（B3）：形态判定只认「宽 + 朝向」，供左轨变体与底栏显隐使用。
+        // 注意它与上方 `desktop`（840 阈值，历史遗留）**并存**：本批不挪
+        // desktop 的阈值语义（那会牵动主题/测试），只在选变体时用 HnBreak，
+        // 使 840–899 这段窗口拿到窄轨（72）而不是平板轨（88）。
+        final railForm = HnBreak.formOf(constraints.biggest);
         final scaffold = Scaffold(
           appBar: AppBar(
             toolbarHeight: television ? 64 : null,
@@ -1077,35 +1115,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const VerticalDivider(width: 1),
                 ] else if (desktop) ...[
-                  NavigationRail(
+                  // §4.1.1（B3）：左导航轨按 §2.1 的形态给宽 ——
+                  // 平板横屏 88（railWide）、手机横屏 72（railNarrow）。
+                  // 改造前这里是无条件换成 Material `NavigationRail`，
+                  // 阈值 840 与 §2 的 900 不一致（840–899 的窗口本属手机横屏，
+                  // 却拿到了平板式左轨）。
+                  HnNavigationRail(
+                    variant: railForm == HnForm.phoneLandscape
+                        ? HnRailVariant.narrow
+                        : HnRailVariant.wide,
+                    keyPrefix: 'rail',
                     selectedIndex: _tab,
-                    onDestinationSelected: _onNavSelected,
-                    labelType: NavigationRailLabelType.all,
-                    groupAlignment: -.8,
-                    destinations: [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.explore_outlined),
-                        selectedIcon: Icon(Icons.explore),
-                        label: Text('发现'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.bookmark_border_rounded),
-                        selectedIcon: Icon(Icons.bookmark_rounded),
-                        label: Text('追剧'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.history_rounded),
-                        label: Text('最近观看'),
-                      ),
-                      if (widget.store.canDownload)
-                        NavigationRailDestination(
-                          icon: Icon(Icons.download_outlined),
-                          selectedIcon: Icon(Icons.download_rounded),
-                          label: Text('下载'),
-                        ),
-                    ],
+                    onSelected: _onNavSelected,
+                    destinations: _railDestinations,
                   ),
-                  const VerticalDivider(width: 1, thickness: 1),
                 ],
                 Expanded(
                   child: _tab == 0
@@ -1143,31 +1166,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ? null
               : _selectionMode
               ? _selectionBar()
-              : AppBottomNavigation(
+              // §5.2（B3）：`AppBottomNavigation` 被 `HnNavigationRail` 的
+              // bottom 变体取代 —— 保留形态、不保留实现。导航项定义收敛到
+              // `_railDestinations`，与左轨共用同一份（改造前两处各写一遍）。
+              : HnNavigationRail(
+                  variant: HnRailVariant.bottom,
+                  keyPrefix: 'bottom-nav',
                   selectedIndex: _tab,
-                  onDestinationSelected: _onNavSelected,
-                  destinations: [
-                    NavigationDestination(
-                      icon: Icon(Icons.explore_outlined),
-                      selectedIcon: Icon(Icons.explore),
-                      label: '发现',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.bookmark_border_rounded),
-                      selectedIcon: Icon(Icons.bookmark_rounded),
-                      label: '追剧',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.history_rounded),
-                      label: '最近观看',
-                    ),
-                    if (widget.store.canDownload)
-                      NavigationDestination(
-                        icon: Icon(Icons.download_outlined),
-                        selectedIcon: Icon(Icons.download_rounded),
-                        label: '下载',
-                      ),
-                  ],
+                  onSelected: _onNavSelected,
+                  destinations: _railDestinations,
                 ),
         );
         if (!television && !_selectionMode) return scaffold;

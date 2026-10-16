@@ -181,11 +181,12 @@ void main() {
           final destination = layout.$3
               ? find.byKey(ValueKey('tv-nav-$tab'))
               : layout.$1.width < 840
+              // B3（§5.2）：底部导航与左轨都换成 `HnNavigationRail`
+              // （bottom / wide / narrow 变体），键前缀统一为
+              // `bottom-nav-N`（底栏）与 `rail-N`（左轨）。
+              // 原来宽屏走 Material `NavigationRail`，现已不存在。
               ? find.byKey(ValueKey('bottom-nav-$tab'))
-              : find.descendant(
-                  of: find.byType(NavigationRail),
-                  matching: find.text(tab == 1 ? '追剧' : '最近观看'),
-                );
+              : find.byKey(ValueKey('rail-$tab'));
           await tester.tap(destination);
           await tester.pumpAndSettle();
         }
