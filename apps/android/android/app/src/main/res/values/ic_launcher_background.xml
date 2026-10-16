@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 自适应图标背景：设计系统 §3.1 浅色 primary，由 tools/gen_icon.py 生成 -->
+<!-- 自适应图标背景层：DESIGN-SYSTEM-V2 §3.1.1 brand-600 #D92B26（浅色主色），
+     由 tools/gen_icon.sh 生成。 -->
 <resources>
-    <color name="ic_launcher_background">#C83933</color>
+    <color name="ic_launcher_background">#D92B26</color>
 </resources>

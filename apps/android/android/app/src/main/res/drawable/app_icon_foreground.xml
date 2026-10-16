@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 红果 Next 自适应图标前景「竖屏追剧」记号，由 tools/gen_icon.sh 生成。
+     108dp 视口；全部内容落在中心 66dp 安全圆内（33% 安全边距），
+     系统裁切为圆形/圆角方形/水滴形时记号完整。
+     播放三角填背景色 brand-600 #D92B26，从白色竖屏中透出。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:rotation="7" android:pivotX="50.14" android:pivotY="55.72">
+        <path
+            android:fillColor="#B31F1C"
+            android:pathData="M50.71,29.55 L65.01,29.55 C68.17,29.55 70.73,32.11 70.73,35.27 L70.73,69.3 C70.73,72.46 68.17,75.02 65.01,75.02 L50.71,75.02 C47.55,75.02 44.99,72.46 44.99,69.3 L44.99,35.27 C44.99,32.11 47.55,29.55 50.71,29.55 Z"/>
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M42.99,32.98 L57.29,32.98 C60.45,32.98 63.01,35.54 63.01,38.7 L63.01,72.74 C63.01,75.9 60.45,78.46 57.29,78.46 L42.99,78.46 C39.83,78.46 37.27,75.9 37.27,72.74 L37.27,38.7 C37.27,35.54 39.83,32.98 42.99,32.98 Z"/>
+        <path
+            android:fillColor="#D92B26"
+            android:pathData="M45.28,50.57 L45.28,60.87 Q45.28,62.3 46.52,61.59 L55.48,56.43 Q56.72,55.72 55.48,55.01 L46.52,49.85 Q45.28,49.14 45.28,50.57 Z"/>
+    </group>
+</vector>

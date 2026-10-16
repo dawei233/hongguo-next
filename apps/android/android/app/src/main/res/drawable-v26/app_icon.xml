@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 红果 Next 自适应图标：brand-600 背景层满幅 + 前景记号 + 单色
+     （Android 13 主题图标沿用同一轮廓），由 tools/gen_icon.sh 生成。 -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@drawable/app_icon_foreground"/>
+    <monochrome android:drawable="@drawable/app_icon_foreground"/>
+</adaptive-icon>
